@@ -271,7 +271,10 @@ export class Tour
   }
 
   public validateBookingRequest(request: BookingRequest): ValidationError[] {
-    const errors = [...request.validate()];
+    const errors = [
+      ...request.validate(),
+      ...request.validateTourParameters(this.getKind()),
+    ];
 
     if (request.getGuestCount() > this.groupSize) {
       errors.push({

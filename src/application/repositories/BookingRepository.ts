@@ -10,7 +10,7 @@ export class BookingRepository extends BrowserStorageRepository<
   }
 
   public addMany(bookings: Booking[]): void {
-    this.saveAll([...this.getAll(), ...bookings]);
+    this.appendMany(bookings);
   }
 
   protected deserialize(record: BookingPrimitives): Booking {

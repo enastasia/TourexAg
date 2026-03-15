@@ -6,29 +6,24 @@ export class CatalogRepository extends BrowserStorageRepository<Tour, TourPrimit
     super('tourex.catalog');
   }
 
-  public findById(tourId: string): Tour | undefined {
-    return this.getAll().find((tour) => tour.getId() === tourId);
+  protected deserialize(record: TourPrimitives): Tour {
+    return Tour.restore(record);
+  }
+
+  public findById(id: string): Tour | undefined {
+    return this.findOne((tour) => tour.getId() === id);
   }
 
   public findBySlug(slug: string): Tour | undefined {
-    return this.getAll().find((tour) => tour.getSlug() === slug);
+    return this.findOne((tour) => tour.getSlug() === slug);
   }
 
-  public saveTour(nextTour: Tour): void {
-    const tours = this.getAll();
-    const index = tours.findIndex((tour) => tour.getId() === nextTour.getId());
-
-    if (index >= 0) {
-      tours.splice(index, 1, nextTour);
-    } else {
-      tours.unshift(nextTour);
-    }
-
-    this.saveAll(tours);
+  public saveTour(tour: Tour): void {
+    this.saveOrReplace(tour, (current) => current.getId() === tour.getId());
   }
 
   public deleteTour(tourId: string): void {
-    this.saveAll(this.getAll().filter((tour) => tour.getId() !== tourId));
+    this.removeWhere((tour) => tour.getId() === tourId);
   }
 
   public deleteToursByTitle(titles: string[]): void {
@@ -36,32 +31,181 @@ export class CatalogRepository extends BrowserStorageRepository<Tour, TourPrimit
       return;
     }
 
-    const titleSet = new Set(titles);
-    this.saveAll(this.getAll().filter((tour) => !titleSet.has(tour.getTitle())));
+    const deniedTitles = new Set(titles.map((title) => title.trim().toLowerCase()));
+    const currentCatalog = this.getAll();
+    const filteredCatalog = currentCatalog.filter(
+      (tour) => !deniedTitles.has(tour.getTitle().trim().toLowerCase()),
+    );
+
+    if (filteredCatalog.length !== currentCatalog.length) {
+      this.saveAll(filteredCatalog);
+    }
   }
 
   public syncSeedCatalog(seedTours: Tour[]): void {
-    const currentTours = this.getAll();
-    const customTours = currentTours.filter(
-      (tour) => !seedTours.some((seedTour) => seedTour.getId() === tour.getId()),
-    );
+    const currentCatalog = this.getAll();
 
-    this.saveAll([...seedTours, ...customTours]);
+    if (currentCatalog.length === 0) {
+      return;
+    }
+
+    const currentIds = new Set(currentCatalog.map((tour) => tour.getId()));
+    const missingSeedTours = seedTours.filter((tour) => !currentIds.has(tour.getId()));
+
+    if (missingSeedTours.length === 0) {
+      return;
+    }
+
+    this.saveAll([...currentCatalog, ...missingSeedTours]);
   }
 
   public syncSeedGroupSizes(seedTours: Tour[]): void {
-    this.syncSeedCatalog(seedTours);
-  }
+    const currentCatalog = this.getAll();
 
-  public syncSeedFacets(seedTours: Tour[]): void {
-    this.syncSeedCatalog(seedTours);
+    if (currentCatalog.length === 0) {
+      return;
+    }
+
+    const seedGroupSizeMap = new Map(
+      seedTours.map((tour) => [tour.getId(), tour.getGroupSize()]),
+    );
+
+    let hasChanges = false;
+
+    const normalizedCatalog = currentCatalog.map((tour) => {
+      const expectedGroupSize = seedGroupSizeMap.get(tour.getId());
+
+      if (
+        expectedGroupSize === undefined ||
+        tour.getGroupSize() === expectedGroupSize
+      ) {
+        return tour;
+      }
+
+      const primitives = tour.toPrimitives();
+      hasChanges = true;
+
+      return Tour.restore({
+        ...primitives,
+        groupSize: expectedGroupSize,
+      });
+    });
+
+    if (hasChanges) {
+      this.saveAll(normalizedCatalog);
+    }
   }
 
   public syncSeedReviews(seedTours: Tour[]): void {
-    this.syncSeedCatalog(seedTours);
+    const currentCatalog = this.getAll();
+
+    if (currentCatalog.length === 0) {
+      return;
+    }
+
+    const seedReviewMap = new Map(
+      seedTours.map((tour) => [tour.getId(), tour.toPrimitives().reviews]),
+    );
+
+    let hasChanges = false;
+
+    const normalizedCatalog = currentCatalog.map((tour) => {
+      const seedReviews = seedReviewMap.get(tour.getId());
+
+      if (!seedReviews) {
+        return tour;
+      }
+
+      const primitives = tour.toPrimitives();
+      const userReviews = primitives.reviews.filter(
+        (review) => !review.id.startsWith(`review-${tour.getId()}-`),
+      );
+      const mergedReviews = [...seedReviews, ...userReviews];
+
+      const unchangedSeedReviews =
+        seedReviews.length === primitives.reviews.length - userReviews.length &&
+        seedReviews.every(
+          (review, index) =>
+            JSON.stringify(review) === JSON.stringify(primitives.reviews[index]),
+        );
+
+      if (unchangedSeedReviews && mergedReviews.length === primitives.reviews.length) {
+        const unchangedUserReviews = userReviews.every(
+          (review, index) =>
+            review.id === primitives.reviews[seedReviews.length + index]?.id,
+        );
+
+        if (unchangedUserReviews) {
+          return tour;
+        }
+      }
+
+      hasChanges = true;
+
+      return Tour.restore({
+        ...primitives,
+        reviews: mergedReviews,
+      });
+    });
+
+    if (hasChanges) {
+      this.saveAll(normalizedCatalog);
+    }
   }
 
-  protected deserialize(record: TourPrimitives): Tour {
-    return Tour.restore(record);
+  public syncSeedFacets(seedTours: Tour[]): void {
+    const currentCatalog = this.getAll();
+
+    if (currentCatalog.length === 0) {
+      return;
+    }
+
+    const seedFacetMap = new Map(
+      seedTours.map((tour) => [
+        tour.getId(),
+        {
+          amenities: tour.getAmenities(),
+          languages: tour.getLanguages(),
+          transportMode: tour.getTransportMode(),
+        },
+      ]),
+    );
+
+    let hasChanges = false;
+
+    const normalizedCatalog = currentCatalog.map((tour) => {
+      const expectedFacets = seedFacetMap.get(tour.getId());
+
+      if (!expectedFacets) {
+        return tour;
+      }
+
+      const primitives = tour.toPrimitives();
+      const sameAmenities =
+        JSON.stringify(primitives.amenities) ===
+        JSON.stringify(expectedFacets.amenities);
+      const sameLanguages =
+        JSON.stringify(primitives.languages) ===
+        JSON.stringify(expectedFacets.languages);
+      const sameTransportMode =
+        primitives.transportMode === expectedFacets.transportMode;
+
+      if (sameAmenities && sameLanguages && sameTransportMode) {
+        return tour;
+      }
+
+      hasChanges = true;
+
+      return Tour.restore({
+        ...primitives,
+        amenities: expectedFacets.amenities,
+        languages: expectedFacets.languages,
+        transportMode: expectedFacets.transportMode,
+      });
+    });
+
+    if (hasChanges) {
+      this.saveAll(normalizedCatalog);
+    }
   }
 }

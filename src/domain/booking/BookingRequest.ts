@@ -1,6 +1,6 @@
 import type { ISerializable, IValidatable } from '../shared/contracts';
 import type { ValidationError } from '../shared/ValidationError';
-import type { TimeSlot } from '../../shared/types/domain';
+import type { TimeSlot, TourKind } from '../../shared/types/domain';
 import { differenceInDays, isAtLeastDaysAfter } from '../../shared/utils/dates';
 
 export interface TicketSelection {
@@ -14,12 +14,37 @@ export interface BookingExtras {
   servicePerPerson: boolean;
 }
 
+export type BookingTourParameterKey =
+  | 'roomType'
+  | 'mealPlan'
+  | 'seasonalRoute'
+  | 'personalGuide'
+  | 'serviceLevel';
+
+export type BookingTourParameters = Partial<Record<BookingTourParameterKey, string>>;
+
+export const TOUR_TYPE_FIELD_MAPPING: Record<TourKind, BookingTourParameterKey[]> = {
+  standard: [],
+  featured: ['roomType', 'mealPlan'],
+  seasonal: ['seasonalRoute'],
+  premium: ['personalGuide', 'serviceLevel'],
+};
+
+const TOUR_PARAMETER_LABELS: Record<BookingTourParameterKey, string> = {
+  roomType: 'room type',
+  mealPlan: 'meal plan',
+  seasonalRoute: 'seasonal route',
+  personalGuide: 'personal guide',
+  serviceLevel: 'service level',
+};
+
 export interface BookingRequestPrimitives {
   checkInDate: string;
   checkOutDate: string;
   timeSlot: TimeSlot;
   tickets: TicketSelection;
   extras: BookingExtras;
+  tourParameters: BookingTourParameters;
 }
 
 export class BookingRequest
@@ -31,6 +56,7 @@ export class BookingRequest
     private timeSlot: TimeSlot,
     private tickets: TicketSelection,
     private extras: BookingExtras,
+    private tourParameters: BookingTourParameters = {},
   ) {}
 
   public getCheckInDate(): string {
@@ -51,6 +77,10 @@ export class BookingRequest
 
   public getExtras(): BookingExtras {
     return { ...this.extras };
+  }
+
+  public getTourParameters(): BookingTourParameters {
+    return { ...this.tourParameters };
   }
 
   public getGuestCount(): number {
@@ -103,6 +133,19 @@ export class BookingRequest
     return errors;
   }
 
+  public validateTourParameters(tourKind: TourKind): ValidationError[] {
+    return TOUR_TYPE_FIELD_MAPPING[tourKind].reduce<ValidationError[]>((errors, field) => {
+      if (!this.tourParameters[field]) {
+        errors.push({
+          field,
+          message: `Select a ${TOUR_PARAMETER_LABELS[field]} before adding this tour to the cart.`,
+        });
+      }
+
+      return errors;
+    }, []);
+  }
+
   public toPrimitives(): BookingRequestPrimitives {
     return {
       checkInDate: this.checkInDate,
@@ -110,6 +153,7 @@ export class BookingRequest
       timeSlot: this.timeSlot,
       tickets: this.getTickets(),
       extras: this.getExtras(),
+      tourParameters: this.getTourParameters(),
     };
   }
 
@@ -120,6 +164,7 @@ export class BookingRequest
       primitives.timeSlot,
       primitives.tickets,
       primitives.extras,
+      primitives.tourParameters ?? {},
     );
   }
 }
