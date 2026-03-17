@@ -10,37 +10,29 @@ export class UserRepository extends BrowserStorageRepository<
   StoredPersonPrimitives
 > {
   public constructor() {
-    super('tourex.users');
+    super('tourex.people');
   }
 
   protected deserialize(record: StoredPersonPrimitives): StoredPerson {
     return record.role === 'admin' ? Admin.restore(record) : User.restore(record);
   }
 
-  public findById(userId: string): StoredPerson | undefined {
-    return this.getAll().find((person) => person.getId() === userId);
+  public findById(personId: string): StoredPerson | undefined {
+    return this.findOne((person) => person.getId() === personId);
   }
 
   public findByEmail(email: string): StoredPerson | undefined {
+    const normalizedEmail = email.trim().toLowerCase();
     return this.getAll().find(
-      (person) => person.getEmail().toLowerCase() === email.trim().toLowerCase(),
+      (person) => person.getEmail().toLowerCase() === normalizedEmail,
     );
+  }
+
+  public savePerson(person: StoredPerson): void {
+    this.saveOrReplace(person, (current) => current.getId() === person.getId());
   }
 
   public getCustomers(): User[] {
     return this.getAll().filter((person): person is User => person instanceof User);
-  }
-
-  public savePerson(person: StoredPerson): void {
-    const people = this.getAll();
-    const index = people.findIndex((current) => current.getId() === person.getId());
-
-    if (index >= 0) {
-      people.splice(index, 1, person);
-    } else {
-      people.unshift(person);
-    }
-
-    this.saveAll(people);
   }
 }

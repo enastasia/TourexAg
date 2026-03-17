@@ -22,6 +22,43 @@ export abstract class BrowserStorageRepository<
 
   protected abstract deserialize(record: TPrimitive): TEntity;
 
+  protected findOne(
+    predicate: (entity: TEntity) => boolean,
+  ): TEntity | undefined {
+    return this.getAll().find(predicate);
+  }
+
+  protected saveOrReplace(
+    entity: TEntity,
+    predicate: (current: TEntity) => boolean,
+    insertMode: 'prepend' | 'append' = 'prepend',
+  ): void {
+    const entities = this.getAll();
+    const index = entities.findIndex(predicate);
+
+    if (index >= 0) {
+      entities.splice(index, 1, entity);
+    } else if (insertMode === 'prepend') {
+      entities.unshift(entity);
+    } else {
+      entities.push(entity);
+    }
+
+    this.saveAll(entities);
+  }
+
+  protected removeWhere(predicate: (entity: TEntity) => boolean): void {
+    this.saveAll(this.getAll().filter((entity) => !predicate(entity)));
+  }
+
+  protected appendMany(entities: TEntity[]): void {
+    if (entities.length === 0) {
+      return;
+    }
+
+    this.saveAll([...this.getAll(), ...entities]);
+  }
+
   private read(): TPrimitive[] {
     if (typeof window === 'undefined') {
       return [];

@@ -9,11 +9,11 @@ export class BookingRepository extends BrowserStorageRepository<
     super('tourex.bookings');
   }
 
-  protected deserialize(record: BookingPrimitives): Booking {
-    return Booking.restore(record);
+  public addMany(bookings: Booking[]): void {
+    this.appendMany(bookings);
   }
 
-  public addMany(bookings: Booking[]): void {
-    this.saveAll([...bookings, ...this.getAll()]);
+  protected deserialize(record: BookingPrimitives): Booking {
+    return Booking.restore(record);
   }
 }

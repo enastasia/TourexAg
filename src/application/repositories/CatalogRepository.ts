@@ -11,28 +11,19 @@ export class CatalogRepository extends BrowserStorageRepository<Tour, TourPrimit
   }
 
   public findById(id: string): Tour | undefined {
-    return this.getAll().find((tour) => tour.getId() === id);
+    return this.findOne((tour) => tour.getId() === id);
   }
 
   public findBySlug(slug: string): Tour | undefined {
-    return this.getAll().find((tour) => tour.getSlug() === slug);
+    return this.findOne((tour) => tour.getSlug() === slug);
   }
 
   public saveTour(tour: Tour): void {
-    const catalog = this.getAll();
-    const index = catalog.findIndex((current) => current.getId() === tour.getId());
-
-    if (index >= 0) {
-      catalog.splice(index, 1, tour);
-    } else {
-      catalog.unshift(tour);
-    }
-
-    this.saveAll(catalog);
+    this.saveOrReplace(tour, (current) => current.getId() === tour.getId());
   }
 
   public deleteTour(tourId: string): void {
-    this.saveAll(this.getAll().filter((tour) => tour.getId() !== tourId));
+    this.removeWhere((tour) => tour.getId() === tourId);
   }
 
   public deleteToursByTitle(titles: string[]): void {
