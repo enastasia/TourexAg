@@ -5,9 +5,10 @@ import { differenceInDays, isAtLeastDaysAfter } from '../../shared/utils/dates';
 
 export interface TicketSelection {
   adults: number;
-  youths: number;
   children: number;
 }
+
+const TICKET_FIELDS: (keyof TicketSelection)[] = ['adults', 'children'];
 
 export interface BookingExtras {
   servicePerBooking: boolean;
@@ -72,7 +73,10 @@ export class BookingRequest
   }
 
   public getTickets(): TicketSelection {
-    return { ...this.tickets };
+    return {
+      adults: this.getTicketCount('adults'),
+      children: this.getTicketCount('children'),
+    };
   }
 
   public getExtras(): BookingExtras {
@@ -84,7 +88,7 @@ export class BookingRequest
   }
 
   public getGuestCount(): number {
-    return this.tickets.adults + this.tickets.youths + this.tickets.children;
+    return this.getTicketCount('adults') + this.getTicketCount('children');
   }
 
   public getDurationInDays(): number {
@@ -123,7 +127,17 @@ export class BookingRequest
       });
     }
 
-    if (this.getGuestCount() <= 0) {
+    const hasInvalidTickets = TICKET_FIELDS.some((field) => {
+      const value = this.tickets[field];
+      return !Number.isInteger(value) || value < 0;
+    });
+
+    if (hasInvalidTickets) {
+      errors.push({
+        field: 'tickets',
+        message: 'Ticket counts must be whole numbers and cannot be negative.',
+      });
+    } else if (this.getGuestCount() <= 0) {
       errors.push({
         field: 'tickets',
         message: 'Add at least one traveller before booking.',
@@ -166,5 +180,10 @@ export class BookingRequest
       primitives.extras,
       primitives.tourParameters ?? {},
     );
+  }
+
+  private getTicketCount(field: keyof TicketSelection): number {
+    const value = this.tickets[field];
+    return Number.isFinite(value) ? value : 0;
   }
 }

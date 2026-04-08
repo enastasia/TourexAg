@@ -1,13 +1,11 @@
 import { Person, type PersonPrimitives } from './Person';
 import type { PersonRole } from '../../shared/types/domain';
-import { Cart, type CartPrimitives } from '../booking/Cart';
 import { Wishlist, type WishlistPrimitives } from '../wishlist/Wishlist';
-import type { Booking } from '../booking/Booking';
 
 export interface UserPrimitives extends PersonPrimitives {
   role: 'user';
   wishlist: WishlistPrimitives;
-  cart: CartPrimitives;
+  cartId: string;
 }
 
 export class User extends Person<UserPrimitives> {
@@ -19,7 +17,7 @@ export class User extends Person<UserPrimitives> {
     avatar: string,
     passwordHash: string,
     private readonly wishlist: Wishlist,
-    private readonly cart: Cart,
+    private readonly cartId: string,
     createdAt = new Date(),
     updatedAt = new Date(),
   ) {
@@ -38,8 +36,8 @@ export class User extends Person<UserPrimitives> {
     return this.wishlist;
   }
 
-  public getCart(): Cart {
-    return this.cart;
+  public getCartId(): string {
+    return this.cartId;
   }
 
   public toggleWishlist(tourId: string): boolean {
@@ -52,21 +50,6 @@ export class User extends Person<UserPrimitives> {
     return this.wishlist.hasTour(tourId);
   }
 
-  public addBookingToCart(booking: Booking): void {
-    this.cart.addLine(booking);
-    this.touch();
-  }
-
-  public removeBookingFromCart(bookingId: string): void {
-    this.cart.removeLine(bookingId);
-    this.touch();
-  }
-
-  public clearCart(): Booking[] {
-    this.touch();
-    return this.cart.clear();
-  }
-
   public override toPrimitives(): UserPrimitives {
     return {
       id: this.id,
@@ -77,7 +60,7 @@ export class User extends Person<UserPrimitives> {
       avatar: this.avatar,
       passwordHash: this.passwordHash,
       wishlist: this.wishlist.toPrimitives(),
-      cart: this.cart.toPrimitives(),
+      cartId: this.cartId,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
     };
@@ -92,7 +75,7 @@ export class User extends Person<UserPrimitives> {
       primitives.avatar,
       primitives.passwordHash,
       Wishlist.restore(primitives.wishlist),
-      Cart.restore(primitives.cart),
+      primitives.cartId,
       new Date(primitives.createdAt),
       new Date(primitives.updatedAt),
     );

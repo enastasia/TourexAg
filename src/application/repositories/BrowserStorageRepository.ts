@@ -7,7 +7,12 @@ export abstract class BrowserStorageRepository<
   protected constructor(private readonly storageKey: string) {}
 
   public getAll(): TEntity[] {
-    return this.read().map((record) => this.deserialize(record));
+    try {
+      return this.readRecords().map((record) => this.deserialize(record));
+    } catch {
+      this.clearStorage();
+      return [];
+    }
   }
 
   public saveAll(entities: TEntity[]): void {
@@ -59,7 +64,7 @@ export abstract class BrowserStorageRepository<
     this.saveAll([...this.getAll(), ...entities]);
   }
 
-  private read(): TPrimitive[] {
+  protected readRecords(): TPrimitive[] {
     if (typeof window === 'undefined') {
       return [];
     }
@@ -70,7 +75,21 @@ export abstract class BrowserStorageRepository<
       return [];
     }
 
-    return JSON.parse(raw) as TPrimitive[];
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? (parsed as TPrimitive[]) : [];
+    } catch {
+      this.clearStorage();
+      return [];
+    }
+  }
+
+  private clearStorage(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    window.localStorage.removeItem(this.storageKey);
   }
 
   private write(records: TPrimitive[]): void {

@@ -101,16 +101,28 @@ export class Booking extends BaseEntity<BookingPrimitives> implements IUserOwned
   }
 
   public confirm(): void {
+    if (this.status !== 'draft') {
+      throw new Error('Only draft bookings can be confirmed.');
+    }
+
     this.status = 'confirmed';
     this.touch();
   }
 
   public cancel(): void {
+    if (this.status === 'cancelled') {
+      throw new Error('Booking is already cancelled.');
+    }
+
     this.status = 'cancelled';
     this.touch();
   }
 
   public updateRequest(request: BookingRequest, totalPrice: number): void {
+    if (this.status !== 'draft') {
+      throw new Error('Only draft bookings can be updated.');
+    }
+
     this.request = request;
     this.totalPrice = totalPrice;
     this.touch();

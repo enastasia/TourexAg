@@ -35,6 +35,7 @@ export class Cart extends BaseEntity<CartPrimitives> implements IUserOwned {
   }
 
   public addLine(booking: Booking): void {
+    this.ensureEditableLine(booking);
     this.lines.unshift(booking);
     this.touch();
   }
@@ -49,6 +50,7 @@ export class Cart extends BaseEntity<CartPrimitives> implements IUserOwned {
   }
 
   public replaceLine(booking: Booking): void {
+    this.ensureEditableLine(booking);
     const index = this.lines.findIndex((line) => line.getId() === booking.getId());
 
     if (index >= 0) {
@@ -90,5 +92,15 @@ export class Cart extends BaseEntity<CartPrimitives> implements IUserOwned {
       new Date(primitives.createdAt),
       new Date(primitives.updatedAt),
     );
+  }
+
+  private ensureEditableLine(booking: Booking): void {
+    if (!booking.belongsToUser(this.userId)) {
+      throw new Error('Cart line must belong to the cart owner.');
+    }
+
+    if (booking.getStatus() !== 'draft') {
+      throw new Error('Only draft bookings can be stored in a cart.');
+    }
   }
 }
