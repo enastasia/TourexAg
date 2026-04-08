@@ -17,7 +17,6 @@ export abstract class TourPricingStrategy {
 
     const travellersCost =
       tickets.adults * discountedUnitPrice +
-      tickets.youths * discountedUnitPrice * 0.82 +
       tickets.children * discountedUnitPrice * 0.58;
 
     const extras = request.getExtras();

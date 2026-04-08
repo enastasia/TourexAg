@@ -5,6 +5,7 @@ import { Wishlist } from '../../domain/wishlist/Wishlist';
 import { createId } from '../../shared/utils/identity';
 import { hashPassword } from '../../shared/utils/security';
 import { SessionRepository } from '../repositories/SessionRepository';
+import { CartRepository } from '../repositories/CartRepository';
 import {
   UserRepository,
   type StoredPerson,
@@ -26,13 +27,14 @@ export interface RegisterPayload {
 export class AuthService {
   public constructor(
     private readonly userRepository: UserRepository,
+    private readonly cartRepository: CartRepository,
     private readonly sessionRepository: SessionRepository,
   ) {}
 
   public login(payload: LoginPayload): ServiceResult<StoredPerson> {
     const person = this.userRepository.findByEmail(payload.email);
 
-    if (!person || !person.matchesPassword(payload.password)) {
+    if (!person || !person.matchesPasswordHash(hashPassword(payload.password))) {
       return failureResult('Invalid email or password.');
     }
 
@@ -49,6 +51,7 @@ export class AuthService {
     }
 
     const userId = createId('user');
+    const cart = new Cart(createId('cart'), userId);
     const user = new User(
       userId,
       payload.fullName,
@@ -57,7 +60,7 @@ export class AuthService {
       `https://i.pravatar.cc/300?u=${payload.email}`,
       hashPassword(payload.password),
       new Wishlist(createId('wishlist'), userId),
-      new Cart(createId('cart'), userId),
+      cart.getId(),
     );
 
     if (!user.isValid()) {
@@ -65,6 +68,7 @@ export class AuthService {
     }
 
     this.userRepository.savePerson(user);
+    this.cartRepository.saveCart(cart);
     this.sessionRepository.save(new AuthSession(createId('session'), userId, 'user'));
 
     return successResult(user);

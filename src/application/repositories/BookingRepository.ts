@@ -1,5 +1,6 @@
 import { Booking, type BookingPrimitives } from '../../domain/booking/Booking';
 import { BrowserStorageRepository } from './BrowserStorageRepository';
+import { normalizeBookingRecord } from './BookingRequestMigration';
 
 export class BookingRepository extends BrowserStorageRepository<
   Booking,
@@ -14,6 +15,6 @@ export class BookingRepository extends BrowserStorageRepository<
   }
 
   protected deserialize(record: BookingPrimitives): Booking {
-    return Booking.restore(record);
+    return Booking.restore(normalizeBookingRecord(record));
   }
 }
