@@ -39,7 +39,9 @@ const normalizeTickets = (tickets: LegacyTicketSelection): TicketSelection => {
   const children = Number(tickets?.children ?? 0);
 
   return {
-    adults: adults + (Number.isFinite(legacyYouths) ? legacyYouths : 0),
-    children,
+    adults:
+      (Number.isFinite(adults) ? adults : 0) +
+      (Number.isFinite(legacyYouths) ? legacyYouths : 0),
+    children: Number.isFinite(children) ? children : 0,
   };
 };

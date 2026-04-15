@@ -5,7 +5,6 @@ import { Wishlist, type WishlistPrimitives } from '../wishlist/Wishlist';
 export interface UserPrimitives extends PersonPrimitives {
   role: 'user';
   wishlist: WishlistPrimitives;
-  cartId: string;
 }
 
 export class User extends Person<UserPrimitives> {
@@ -17,7 +16,6 @@ export class User extends Person<UserPrimitives> {
     avatar: string,
     passwordHash: string,
     private readonly wishlist: Wishlist,
-    private readonly cartId: string,
     createdAt = new Date(),
     updatedAt = new Date(),
   ) {
@@ -34,10 +32,6 @@ export class User extends Person<UserPrimitives> {
 
   public getWishlist(): Wishlist {
     return this.wishlist;
-  }
-
-  public getCartId(): string {
-    return this.cartId;
   }
 
   public toggleWishlist(tourId: string): boolean {
@@ -60,7 +54,6 @@ export class User extends Person<UserPrimitives> {
       avatar: this.avatar,
       passwordHash: this.passwordHash,
       wishlist: this.wishlist.toPrimitives(),
-      cartId: this.cartId,
       createdAt: this.createdAt.toISOString(),
       updatedAt: this.updatedAt.toISOString(),
     };
@@ -75,7 +68,6 @@ export class User extends Person<UserPrimitives> {
       primitives.avatar,
       primitives.passwordHash,
       Wishlist.restore(primitives.wishlist),
-      primitives.cartId,
       new Date(primitives.createdAt),
       new Date(primitives.updatedAt),
     );

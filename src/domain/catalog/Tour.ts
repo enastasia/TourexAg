@@ -4,6 +4,7 @@ import { CatalogItem, type CatalogItemPrimitives } from './CatalogItem';
 import type {
   IBookable,
   IDiscountable,
+  IFilterable,
   IReviewable,
   IWishlistable,
 } from '../shared/contracts';
@@ -19,6 +20,7 @@ import {
   type TourPriceQuote,
   type TourPricingStrategy,
 } from './TourPricing';
+import { TourFilter } from './TourFilter';
 import type { ValidationError } from '../shared/ValidationError';
 
 export interface TourItineraryItem {
@@ -80,7 +82,8 @@ export class Tour
     IBookable<BookingRequest, Booking>,
     IDiscountable,
     IReviewable<Review>,
-    IWishlistable
+    IWishlistable,
+    IFilterable<TourFilter>
 {
   protected readonly locationNote: string;
   protected readonly durationDays: number;
@@ -93,7 +96,7 @@ export class Tour
   protected readonly includedItems: string[];
   protected readonly excludedItems: string[];
   protected readonly itinerary: TourItineraryItem[];
-  protected reviews: Review[];
+  protected readonly reviews: Review[];
   protected readonly ribbonLabel: string | null;
 
   public constructor(props: TourProps) {
@@ -228,9 +231,17 @@ export class Tour
     return averageRating > 4.5 ? 5 : 4;
   }
 
-  public getScoreBreakdown(): ReviewScores | null {
+  public getScoreBreakdown(): ReviewScores {
+    const fallback = {
+      location: 4.8,
+      amenities: 4.7,
+      services: 4.9,
+      price: 4.5,
+      rooms: 4.8,
+    };
+
     if (this.reviews.length === 0) {
-      return null;
+      return fallback;
     }
 
     const summary = {
@@ -306,6 +317,62 @@ export class Tour
 
   public quote(request: BookingRequest): TourPriceQuote {
     return this.createPricingStrategy().quote(this, request);
+  }
+
+  public matchesReviewStars(reviewStars: number[]): boolean {
+    return reviewStars.length === 0 || reviewStars.includes(this.getReviewStarBucket());
+  }
+
+  public matches(criteria: TourFilter): boolean {
+    const query = criteria.getQuery().trim().toLowerCase();
+    const destinations = criteria.getDestinations();
+    const durations = criteria.getDurations();
+    const transportModes = criteria.getTransportModes();
+    const amenities = criteria.getAmenities();
+    const languages = criteria.getLanguages();
+    const reviewStars = criteria.getReviewStars();
+    const guests = criteria.getGuests();
+    const [minimumPrice, maximumPrice] = criteria.getPriceRange();
+
+    const queryMatches =
+      query.length === 0 ||
+      this.title.toLowerCase().includes(query) ||
+      this.destination.getLabel().toLowerCase().includes(query) ||
+      this.summary.toLowerCase().includes(query);
+
+    const destinationMatches =
+      destinations.length === 0 || destinations.includes(this.destination.getId());
+
+    const durationMatches =
+      durations.length === 0 || durations.includes(this.durationDays);
+
+    const transportMatches =
+      transportModes.length === 0 || transportModes.includes(this.transportMode);
+
+    const amenitiesMatch =
+      amenities.length === 0 ||
+      amenities.every((amenity) => this.amenities.includes(amenity));
+
+    const languageMatch =
+      languages.length === 0 ||
+      languages.some((language) => this.languages.includes(language));
+
+    const ratingMatch = this.matchesReviewStars(reviewStars);
+    const price = this.getDiscountedPrice();
+    const priceMatch = price >= minimumPrice && price <= maximumPrice;
+    const guestsMatch = guests === 0 || this.groupSize === guests;
+
+    return (
+      queryMatches &&
+      destinationMatches &&
+      durationMatches &&
+      transportMatches &&
+      amenitiesMatch &&
+      languageMatch &&
+      ratingMatch &&
+      priceMatch &&
+      guestsMatch
+    );
   }
 
   public override validate(): ValidationError[] {

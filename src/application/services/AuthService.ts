@@ -4,12 +4,9 @@ import { User } from '../../domain/people/User';
 import { Wishlist } from '../../domain/wishlist/Wishlist';
 import { createId } from '../../shared/utils/identity';
 import { hashPassword } from '../../shared/utils/security';
-import { SessionRepository } from '../repositories/SessionRepository';
 import { CartRepository } from '../repositories/CartRepository';
-import {
-  UserRepository,
-  type StoredPerson,
-} from '../repositories/UserRepository';
+import { SessionRepository } from '../repositories/SessionRepository';
+import { UserRepository, type StoredPerson,} from '../repositories/UserRepository';
 import { failureResult, successResult, type ServiceResult } from './ServiceResult';
 
 export interface LoginPayload {
@@ -51,7 +48,6 @@ export class AuthService {
     }
 
     const userId = createId('user');
-    const cart = new Cart(createId('cart'), userId);
     const user = new User(
       userId,
       payload.fullName,
@@ -60,7 +56,6 @@ export class AuthService {
       `https://i.pravatar.cc/300?u=${payload.email}`,
       hashPassword(payload.password),
       new Wishlist(createId('wishlist'), userId),
-      cart.getId(),
     );
 
     if (!user.isValid()) {
@@ -68,7 +63,7 @@ export class AuthService {
     }
 
     this.userRepository.savePerson(user);
-    this.cartRepository.saveCart(cart);
+    this.cartRepository.saveCart(new Cart(createId('cart'), userId));
     this.sessionRepository.save(new AuthSession(createId('session'), userId, 'user'));
 
     return successResult(user);

@@ -1,5 +1,6 @@
 import { Cart, type CartPrimitives } from '../../domain/booking/Cart';
 import type { User } from '../../domain/people/User';
+import { createId } from '../../shared/utils/identity';
 import { BrowserStorageRepository } from './BrowserStorageRepository';
 import { normalizeCartRecord } from './BookingRequestMigration';
 
@@ -23,7 +24,7 @@ export class CartRepository extends BrowserStorageRepository<Cart, CartPrimitive
       return cart;
     }
 
-    const emptyCart = new Cart(user.getCartId(), user.getId());
+    const emptyCart = new Cart(createId('cart'), user.getId());
     this.saveCart(emptyCart);
     return emptyCart;
   }

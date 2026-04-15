@@ -1,5 +1,4 @@
 import type { BookingRequest } from '../../domain/booking/BookingRequest';
-import type { Cart } from '../../domain/booking/Cart';
 import { User } from '../../domain/people/User';
 import { BookingRepository } from '../repositories/BookingRepository';
 import { CartRepository } from '../repositories/CartRepository';
@@ -37,7 +36,7 @@ export class BookingService {
       return failureResult(bookingErrors[0].message);
     }
 
-    const cart = this.requireCart(user);
+    const cart = this.cartRepository.getOrCreateForUser(user);
     cart.addLine(tour.createBooking(userId, request));
     this.cartRepository.saveCart(cart);
 
@@ -55,17 +54,13 @@ export class BookingService {
       return failureResult('Only logged in travelers can edit cart items.');
     }
 
-    const cart = this.requireCart(user);
+    const cart = this.cartRepository.getOrCreateForUser(user);
     const cartBooking = cart
       .getLines()
       .find((line) => line.getId() === bookingId);
 
     if (!cartBooking) {
       return failureResult('Cart item not found.');
-    }
-
-    if (cartBooking.getStatus() !== 'draft') {
-      return failureResult('Only draft cart items can be edited.');
     }
 
     const tour = this.catalogRepository.findById(cartBooking.getTourId());
@@ -94,7 +89,7 @@ export class BookingService {
       return failureResult('Only logged in travelers can edit cart items.');
     }
 
-    const cart = this.requireCart(user);
+    const cart = this.cartRepository.getOrCreateForUser(user);
     cart.removeLine(bookingId);
     this.cartRepository.saveCart(cart);
 
@@ -108,18 +103,13 @@ export class BookingService {
       return failureResult('Only logged in travelers can check out.');
     }
 
-    const cart = this.requireCart(user);
-    const currentLines = cart.getLines();
+    const cart = this.cartRepository.getOrCreateForUser(user);
+    const currentLines = cart.clear();
 
     if (currentLines.length === 0) {
       return failureResult('Your cart is empty.');
     }
 
-    if (currentLines.some((booking) => booking.getStatus() !== 'draft')) {
-      return failureResult('Only draft cart items can be checked out.');
-    }
-
-    cart.clear();
     currentLines.forEach((booking) => booking.confirm());
     this.bookingRepository.addMany(currentLines);
     this.cartRepository.saveCart(cart);
@@ -130,9 +120,5 @@ export class BookingService {
   private requireUser(userId: string): User | null {
     const person = this.userRepository.findById(userId);
     return person instanceof User ? person : null;
-  }
-
-  private requireCart(user: User): Cart {
-    return this.cartRepository.getOrCreateForUser(user);
   }
 }
