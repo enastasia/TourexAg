@@ -29,6 +29,9 @@ export interface CatalogMeta {
   maxPrice: number;
 }
 
+const MAX_CATALOG_PAGES = 3;
+const HIDDEN_FILTER_LANGUAGES = new Set(['Hindi', 'Japanese', 'Ukrainian']);
+
 export class CatalogService {
   public constructor(
     private readonly catalogRepository: CatalogRepository,
@@ -43,40 +46,43 @@ export class CatalogService {
     return this.catalogRepository.findBySlug(slug);
   }
 
-  public getCatalogPage(filter: TourFilter, sourceTours?: Tour[]): CatalogPage {
+  public getCatalogPage(filter: TourFilter): CatalogPage {
     const filtered = this.sortTours(
-      this.getTours(sourceTours).filter((tour) => this.tourMatcher.matches(tour, filter)),
+      this.catalogRepository.getAll().filter((tour) => this.tourMatcher.matches(tour, filter)),
       filter,
     );
     const pageSize = filter.getPageSize();
-    const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const uncappedTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const totalPages = Math.min(MAX_CATALOG_PAGES, uncappedTotalPages);
     const page = Math.min(Math.max(1, filter.getPage()), totalPages);
     const startIndex = (page - 1) * pageSize;
+    const visibleItems = filtered.slice(0, pageSize * totalPages);
 
     return {
-      items: filtered.slice(startIndex, startIndex + pageSize),
-      totalItems: filtered.length,
+      items: visibleItems.slice(startIndex, startIndex + pageSize),
+      totalItems: visibleItems.length,
       totalPages,
       currentPage: page,
     };
   }
 
-  public getFeaturedTours(limit: number, sourceTours?: Tour[]): Tour[] {
-    return this.getTours(sourceTours)
+  public getFeaturedTours(limit: number): Tour[] {
+    return this.catalogRepository
+      .getAll()
       .filter((tour) => tour.getKind() !== 'standard')
       .slice(0, limit);
   }
 
-  public getPopularTours(limit: number, sourceTours?: Tour[]): Tour[] {
-    return [...this.getTours(sourceTours)]
+  public getPopularTours(limit: number): Tour[] {
+    return [...this.catalogRepository.getAll()]
       .sort((left, right) => right.getAverageRating() - left.getAverageRating())
       .slice(0, limit);
   }
 
-  public getTopDestinations(limit: number, sourceTours?: Tour[]): DestinationSummary[] {
+  public getTopDestinations(limit: number): DestinationSummary[] {
     const destinationMap = new Map<string, DestinationSummary>();
 
-    this.getTours(sourceTours).forEach((tour) => {
+    this.catalogRepository.getAll().forEach((tour) => {
       const destination = tour.getDestination();
       const current = destinationMap.get(destination.getId());
 
@@ -98,8 +104,9 @@ export class CatalogService {
       .slice(0, limit);
   }
 
-  public getTestimonials(limit: number, sourceTours?: Tour[]): Review[] {
-    return this.getTours(sourceTours)
+  public getTestimonials(limit: number): Review[] {
+    return this.catalogRepository
+      .getAll()
       .flatMap((tour) => tour.getReviews())
       .sort(
         (left, right) =>
@@ -108,8 +115,8 @@ export class CatalogService {
       .slice(0, limit);
   }
 
-  public getMeta(sourceTours?: Tour[]): CatalogMeta {
-    const tours = this.getTours(sourceTours);
+  public getMeta(): CatalogMeta {
+    const tours = this.catalogRepository.getAll();
     const destinationsMap = new Map<string, { id: string; label: string }>();
 
     tours.forEach((tour) => {
@@ -126,7 +133,9 @@ export class CatalogService {
       durations: [...new Set(tours.map((tour) => tour.getDurationDays()))].sort(
         (left, right) => left - right,
       ),
-      languages: [...new Set(tours.flatMap((tour) => tour.getLanguages()))],
+      languages: [...new Set(tours.flatMap((tour) => tour.getLanguages()))].filter(
+        (language) => !HIDDEN_FILTER_LANGUAGES.has(language),
+      ),
       maxPrice:
         tours.length > 0
           ? Math.max(...tours.map((tour) => tour.getDiscountedPrice()))
@@ -140,10 +149,6 @@ export class CatalogService {
 
   public deleteTour(tourId: string): void {
     this.catalogRepository.deleteTour(tourId);
-  }
-
-  private getTours(sourceTours?: Tour[]): Tour[] {
-    return sourceTours ?? this.catalogRepository.getAll();
   }
 
   private sortTours(tours: Tour[], filter: TourFilter): Tour[] {

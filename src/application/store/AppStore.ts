@@ -1,7 +1,8 @@
 import type { AuthSession } from '../../domain/auth/AuthSession';
-import type { Booking } from '../../domain/booking/Booking';
 import type { BookingRequest } from '../../domain/booking/BookingRequest';
-import { PricingPlan } from '../../domain/catalog/PricingPlan';
+import type { Booking } from '../../domain/booking/Booking';
+import type { Cart } from '../../domain/booking/Cart';
+import type { PricingPlan } from '../../domain/catalog/PricingPlan';
 import type { Tour } from '../../domain/catalog/Tour';
 import {
   TourFilter,
@@ -10,29 +11,28 @@ import {
 import { Admin } from '../../domain/people/Admin';
 import { User } from '../../domain/people/User';
 import type { Review } from '../../domain/reviews/Review';
-import { createSeedBookings } from '../../infrastructure/data/seedBookings';
-import { createSeedPricingPlans } from '../../infrastructure/data/seedPricingPlans';
-import { createSeedTours } from '../../infrastructure/data/seedCatalog';
-import { createSeedUsers } from '../../infrastructure/data/seedUsers';
-import { BookingRepository } from '../repositories/BookingRepository';
-import { CatalogRepository } from '../repositories/CatalogRepository';
-import { SessionRepository } from '../repositories/SessionRepository';
 import {
-  UserRepository,
   type StoredPerson,
 } from '../repositories/UserRepository';
 import { AdminService, type AdminTourDraft } from '../services/AdminService';
-import {
-  AuthService,
-  type LoginPayload,
-  type RegisterPayload,
-} from '../services/AuthService';
+import { AuthService, type LoginPayload, type RegisterPayload } from '../services/AuthService';
 import { BookingService } from '../services/BookingService';
-import { CatalogService } from '../services/CatalogService';
-import { failureResult, type ServiceResult } from '../services/ServiceResult';
+import {
+  CatalogService,
+  type CatalogMeta,
+  type CatalogPage,
+  type DestinationSummary,
+} from '../services/CatalogService';
 import { ReviewService, type ReviewDraft } from '../services/ReviewService';
+import {
+  failureResult,
+  type ServiceResult,
+} from '../services/ServiceResult';
+import type { AppStoreDependencies } from './AppStoreDependencies';
 
 type FlashTone = 'success' | 'error';
+
+type Listener = () => void;
 
 export interface FlashMessage {
   tone: FlashTone;
@@ -45,45 +45,46 @@ export interface AppStoreState {
   people: StoredPerson[];
   session: AuthSession | null;
   currentPerson: StoredPerson | null;
+  currentCart: Cart | null;
   pricingPlans: PricingPlan[];
   filter: TourFilter;
   isMenuOpen: boolean;
   flashMessage: FlashMessage | null;
 }
 
-type Listener = () => void;
-
 export class AppStore {
   private readonly listeners = new Set<Listener>();
-  private readonly catalogRepository = new CatalogRepository();
-  private readonly userRepository = new UserRepository();
-  private readonly bookingRepository = new BookingRepository();
-  private readonly sessionRepository = new SessionRepository();
-  private readonly catalogService = new CatalogService(this.catalogRepository);
-  private readonly authService = new AuthService(
-    this.userRepository,
-    this.sessionRepository,
-  );
-  private readonly bookingService = new BookingService(
-    this.userRepository,
-    this.catalogRepository,
-    this.bookingRepository,
-  );
-  private readonly reviewService = new ReviewService(
-    this.userRepository,
-    this.catalogRepository,
-  );
-  private readonly adminService = new AdminService(
-    this.catalogRepository,
-    this.userRepository,
-  );
-  private readonly pricingPlans = createSeedPricingPlans();
+
+  private readonly catalogRepository: AppStoreDependencies['catalogRepository'];
+  private readonly userRepository: AppStoreDependencies['userRepository'];
+  private readonly bookingRepository: AppStoreDependencies['bookingRepository'];
+  private readonly cartRepository: AppStoreDependencies['cartRepository'];
+  private readonly pricingPlanRepository: AppStoreDependencies['pricingPlanRepository'];
+  private readonly sessionRepository: AppStoreDependencies['sessionRepository'];
+  private readonly authGuard: AppStoreDependencies['authGuard'];
+  private readonly authService: AuthService;
+  private readonly bookingService: BookingService;
+  private readonly catalogService: CatalogService;
+  private readonly reviewService: ReviewService;
+  private readonly adminService: AdminService;
 
   private state: AppStoreState;
+  private storageErrorMessage: string | null = null;
 
-  public constructor() {
-    this.seedDefaults();
-    this.state = this.buildState(null, false, TourFilter.createDefault());
+  public constructor(dependencies: AppStoreDependencies) {
+    this.catalogRepository = dependencies.catalogRepository;
+    this.userRepository = dependencies.userRepository;
+    this.bookingRepository = dependencies.bookingRepository;
+    this.cartRepository = dependencies.cartRepository;
+    this.pricingPlanRepository = dependencies.pricingPlanRepository;
+    this.sessionRepository = dependencies.sessionRepository;
+    this.authGuard = dependencies.authGuard;
+    this.authService = dependencies.authService;
+    this.bookingService = dependencies.bookingService;
+    this.catalogService = dependencies.catalogService;
+    this.reviewService = dependencies.reviewService;
+    this.adminService = dependencies.adminService;
+    this.state = this.buildInitialState();
   }
 
   public subscribe(listener: Listener): () => void {
@@ -95,307 +96,426 @@ export class AppStore {
     return this.state;
   }
 
-  public dismissFlash(): void {
-    this.publishState({
-      ...this.state,
-      flashMessage: null,
+  public toggleMenu(force?: boolean): void {
+    this.setState({
+      isMenuOpen: force ?? !this.state.isMenuOpen,
     });
   }
 
-  public toggleMenu(force?: boolean): void {
-    this.publishState({
-      ...this.state,
-      isMenuOpen: force ?? !this.state.isMenuOpen,
-    });
+  public dismissFlash(): void {
+    if (this.state.flashMessage) {
+      this.setState({ flashMessage: null });
+    }
   }
 
   public updateFilter(
     changes: Partial<TourFilterPrimitives>,
     resetPage = false,
   ): void {
-    this.publishState({
-      ...this.state,
+    this.setState({
       filter: this.state.filter.withChanges(changes, resetPage),
     });
   }
 
   public resetFilter(): void {
-    this.publishState({
-      ...this.state,
+    this.setState({
       filter: TourFilter.createDefault(),
     });
   }
 
   public login(payload: LoginPayload): ServiceResult<StoredPerson> {
-    const result = this.authService.login(payload);
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Logged in successfully.',
-          }
-        : null,
-    );
-    return result;
+    return this.runAction(() => {
+      const result = this.authService.login(payload);
+
+      if (!result.success || !result.data) {
+        this.setFlash('error', result.error ?? 'Unable to log in.');
+        return result;
+      }
+
+      this.setState({
+        currentPerson: result.data,
+        currentCart: this.resolveCart(result.data),
+        session: this.sessionRepository.get(),
+        flashMessage: {
+          tone: 'success',
+          text: 'Logged in successfully.',
+        },
+      });
+
+      return result;
+    }, 'Unable to log in.');
   }
 
   public register(payload: RegisterPayload): ServiceResult<User> {
-    const result = this.authService.register(payload);
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Account created successfully.',
-          }
-        : null,
-    );
-    return result;
+    return this.runAction(() => {
+      const result = this.authService.register(payload);
+
+      if (!result.success || !result.data) {
+        this.setFlash('error', result.error ?? 'Unable to register.');
+        return result;
+      }
+
+      this.setState({
+        currentPerson: result.data,
+        currentCart: this.resolveCart(result.data),
+        people: this.userRepository.getAll(),
+        session: this.sessionRepository.get(),
+        flashMessage: {
+          tone: 'success',
+          text: 'Account created successfully.',
+        },
+      });
+
+      return result;
+    }, 'Unable to register.');
   }
 
   public logout(): void {
-    this.authService.logout();
-    this.publishState(this.buildState(
-      {
-        tone: 'success',
-        text: 'You have been logged out.',
-      },
-      this.state.isMenuOpen,
-      this.state.filter,
-    ));
+    try {
+      this.authService.logout();
+      this.setState({
+        currentPerson: null,
+        currentCart: null,
+        session: null,
+        flashMessage: {
+          tone: 'success',
+          text: 'You have been logged out.',
+        },
+      });
+    } catch (error) {
+      this.setFlash('error', this.reportError(error, 'Unable to log out.'));
+    }
   }
 
   public toggleWishlist(tourId: string): ServiceResult<boolean> {
-    if (!(this.state.currentPerson instanceof User)) {
-      const result = failureResult<boolean>(
+    return this.runAction(() => {
+      const user = this.authGuard.requireUser(
+        this.state.currentPerson,
         'Please log in as a traveler to manage your wishlist.',
       );
-      this.refresh(result);
-      return result;
-    }
 
-    const added = this.state.currentPerson.toggleWishlist(tourId);
-    this.userRepository.savePerson(this.state.currentPerson);
-    const result = {
-      success: true,
-      data: added,
-    };
+      if (!user.success || !user.data) {
+        this.setFlash(
+          'error',
+          user.error ?? 'Please log in as a traveler to manage your wishlist.',
+        );
+        return failureResult(
+          user.error ?? 'Please log in as a traveler to manage your wishlist.',
+        );
+      }
 
-    this.refresh(
-      result,
-      {
-        tone: 'success',
-        text: added ? 'Tour added to wishlist.' : 'Tour removed from wishlist.',
-      },
-    );
+      if (!this.state.tours.some((tour) => tour.getId() === tourId)) {
+        const error = 'Tour not found.';
+        this.setFlash('error', error);
+        return failureResult(error);
+      }
 
-    return result;
+      const currentUser = user.data;
+      const isAdded = currentUser.toggleWishlist(tourId);
+      this.userRepository.savePerson(currentUser);
+      this.setState({
+        currentPerson: currentUser,
+        people: this.replacePerson(this.state.people, currentUser),
+        flashMessage: {
+          tone: 'success',
+          text: isAdded ? 'Tour added to wishlist.' : 'Tour removed from wishlist.',
+        },
+      });
+
+      return {
+        success: true,
+        data: isAdded,
+      };
+    }, 'Unable to update wishlist.');
   }
 
-  public addToCart(tourId: string, request: BookingRequest): ServiceResult<void> {
-    if (!(this.state.currentPerson instanceof User)) {
-      const result = failureResult<void>(
+  public addToCart(
+    tourId: string,
+    request: BookingRequest,
+  ): ServiceResult<void> {
+    return this.runAction(() => {
+      const user = this.authGuard.requireUser(
+        this.state.currentPerson,
         'Please log in as a traveler to add tours to the cart.',
       );
-      this.refresh(result);
+
+      if (!user.success || !user.data) {
+        this.setFlash(
+          'error',
+          user.error ?? 'Please log in as a traveler to add tours to the cart.',
+        );
+        return failureResult(
+          user.error ?? 'Please log in as a traveler to add tours to the cart.',
+        );
+      }
+
+      const result = this.bookingService.addToCart(user.data.getId(), tourId, request);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to add this tour to cart.');
+        return result;
+      }
+
+      this.setState({
+        currentCart: this.resolveCart(user.data),
+        flashMessage: {
+          tone: 'success',
+          text: 'Tour added to cart.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.bookingService.addToCart(
-      this.state.currentPerson.getId(),
-      tourId,
-      request,
-    );
-
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Tour added to cart.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to add this tour to cart.');
   }
 
   public updateCartBooking(
     bookingId: string,
     request: BookingRequest,
   ): ServiceResult<void> {
-    if (!(this.state.currentPerson instanceof User)) {
-      const result = failureResult<void>(
+    return this.runAction(() => {
+      const user = this.authGuard.requireUser(
+        this.state.currentPerson,
         'Please log in as a traveler to edit cart items.',
       );
-      this.refresh(result);
+
+      if (!user.success || !user.data) {
+        this.setFlash(
+          'error',
+          user.error ?? 'Please log in as a traveler to edit cart items.',
+        );
+        return failureResult(
+          user.error ?? 'Please log in as a traveler to edit cart items.',
+        );
+      }
+
+      const result = this.bookingService.updateCartBooking(
+        user.data.getId(),
+        bookingId,
+        request,
+      );
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to update cart item.');
+        return result;
+      }
+
+      this.setState({
+        currentCart: this.resolveCart(user.data),
+        flashMessage: {
+          tone: 'success',
+          text: 'Cart updated.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.bookingService.updateCartBooking(
-      this.state.currentPerson.getId(),
-      bookingId,
-      request,
-    );
-
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Cart updated.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to update cart item.');
   }
 
   public removeFromCart(bookingId: string): ServiceResult<void> {
-    if (!(this.state.currentPerson instanceof User)) {
-      const result = failureResult<void>(
+    return this.runAction(() => {
+      const user = this.authGuard.requireUser(
+        this.state.currentPerson,
         'Please log in as a traveler to edit cart items.',
       );
-      this.refresh(result);
+
+      if (!user.success || !user.data) {
+        this.setFlash(
+          'error',
+          user.error ?? 'Please log in as a traveler to edit cart items.',
+        );
+        return failureResult(
+          user.error ?? 'Please log in as a traveler to edit cart items.',
+        );
+      }
+
+      const result = this.bookingService.removeFromCart(user.data.getId(), bookingId);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to remove cart item.');
+        return result;
+      }
+
+      this.setState({
+        currentCart: this.resolveCart(user.data),
+        flashMessage: {
+          tone: 'success',
+          text: 'Item removed from cart.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.bookingService.removeFromCart(
-      this.state.currentPerson.getId(),
-      bookingId,
-    );
-
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Item removed from cart.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to remove cart item.');
   }
 
   public checkoutCart(): ServiceResult<number> {
-    if (!(this.state.currentPerson instanceof User)) {
-      const result = failureResult<number>(
+    return this.runAction(() => {
+      const user = this.authGuard.requireUser(
+        this.state.currentPerson,
         'Please log in as a traveler to complete checkout.',
       );
-      this.refresh(result);
+
+      if (!user.success || !user.data) {
+        this.setFlash(
+          'error',
+          user.error ?? 'Please log in as a traveler to complete checkout.',
+        );
+        return failureResult(
+          user.error ?? 'Please log in as a traveler to complete checkout.',
+        );
+      }
+
+      const result = this.bookingService.checkout(user.data.getId());
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to complete checkout.');
+        return result;
+      }
+
+      this.setState({
+        bookings: this.bookingRepository.getAll(),
+        currentCart: this.resolveCart(user.data),
+        flashMessage: {
+          tone: 'success',
+          text: `Checkout complete. ${result.data ?? 0} booking(s) confirmed.`,
+        },
+      });
+
       return result;
-    }
-
-    const result = this.bookingService.checkout(this.state.currentPerson.getId());
-
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: `Checkout complete. ${result.data} booking(s) confirmed.`,
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to complete checkout.');
   }
 
   public submitReview(draft: ReviewDraft): ServiceResult<void> {
-    if (!this.state.currentPerson) {
-      const result = failureResult<void>('Please log in before submitting a review.');
-      this.refresh(result);
+    return this.runAction(() => {
+      if (!this.state.currentPerson) {
+        const error = 'Please log in before submitting a review.';
+        this.setFlash('error', error);
+        return failureResult(error);
+      }
+
+      const result = this.reviewService.createReview(
+        this.state.currentPerson.getId(),
+        draft,
+      );
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to submit review.');
+        return result;
+      }
+
+      this.setState({
+        tours: this.catalogRepository.getAll(),
+        flashMessage: {
+          tone: 'success',
+          text: 'Review submitted.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.reviewService.createReview(
-      this.state.currentPerson.getId(),
-      draft,
-    );
-
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Review submitted.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to submit review.');
   }
 
   public createTour(draft: AdminTourDraft): ServiceResult<Tour> {
-    if (!(this.state.currentPerson instanceof Admin)) {
-      const result = failureResult<Tour>('Only admins can create tours.');
-      this.refresh(result);
+    return this.runAction(() => {
+      const admin = this.authGuard.requireAdmin(
+        this.state.currentPerson,
+        'Only admins can create tours.',
+      );
+
+      if (!admin.success) {
+        this.setFlash('error', admin.error ?? 'Only admins can create tours.');
+        return failureResult(admin.error ?? 'Only admins can create tours.');
+      }
+
+      const result = this.adminService.createTour(draft);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to create tour.');
+        return result;
+      }
+
+      this.setState({
+        tours: this.catalogRepository.getAll(),
+        flashMessage: {
+          tone: 'success',
+          text: 'Tour created.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.adminService.createTour(draft);
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Tour created.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to create tour.');
   }
 
   public updateTour(
     tourId: string,
     draft: AdminTourDraft,
   ): ServiceResult<Tour> {
-    if (!(this.state.currentPerson instanceof Admin)) {
-      const result = failureResult<Tour>('Only admins can edit tours.');
-      this.refresh(result);
+    return this.runAction(() => {
+      const admin = this.authGuard.requireAdmin(
+        this.state.currentPerson,
+        'Only admins can edit tours.',
+      );
+
+      if (!admin.success) {
+        this.setFlash('error', admin.error ?? 'Only admins can edit tours.');
+        return failureResult(admin.error ?? 'Only admins can edit tours.');
+      }
+
+      const result = this.adminService.updateTour(tourId, draft);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to update tour.');
+        return result;
+      }
+
+      this.setState({
+        tours: this.catalogRepository.getAll(),
+        flashMessage: {
+          tone: 'success',
+          text: 'Tour updated.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.adminService.updateTour(tourId, draft);
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Tour updated.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to update tour.');
   }
 
   public deleteTour(tourId: string): ServiceResult<void> {
-    if (!(this.state.currentPerson instanceof Admin)) {
-      const result = failureResult<void>('Only admins can delete tours.');
-      this.refresh(result);
+    return this.runAction(() => {
+      const admin = this.authGuard.requireAdmin(
+        this.state.currentPerson,
+        'Only admins can delete tours.',
+      );
+
+      if (!admin.success) {
+        this.setFlash('error', admin.error ?? 'Only admins can delete tours.');
+        return failureResult(admin.error ?? 'Only admins can delete tours.');
+      }
+
+      const result = this.adminService.deleteTour(tourId);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to delete tour.');
+        return result;
+      }
+
+      this.setState({
+        tours: this.catalogRepository.getAll(),
+        flashMessage: {
+          tone: 'success',
+          text: 'Tour deleted.',
+        },
+      });
+
       return result;
-    }
-
-    const result = this.adminService.deleteTour(tourId);
-    this.refresh(
-      result,
-      result.success
-        ? {
-            tone: 'success',
-            text: 'Tour deleted.',
-          }
-        : null,
-    );
-
-    return result;
+    }, 'Unable to delete tour.');
   }
 
-  public getCatalogPage() {
+  public getCatalogPage(): CatalogPage {
     return this.catalogService.getCatalogPage(this.state.filter);
+  }
+
+  public getCatalogMeta(): CatalogMeta {
+    return this.catalogService.getMeta();
   }
 
   public getFeaturedTours(limit: number): Tour[] {
@@ -406,7 +526,7 @@ export class AppStore {
     return this.catalogService.getPopularTours(limit);
   }
 
-  public getDestinationSummaries(limit: number) {
+  public getDestinationSummaries(limit: number): DestinationSummary[] {
     return this.catalogService.getTopDestinations(limit);
   }
 
@@ -415,83 +535,121 @@ export class AppStore {
   }
 
   public getTourBySlug(slug: string): Tour | undefined {
-    return this.catalogService.getBySlug(slug);
+    return this.state.tours.find((tour) => tour.getSlug() === slug);
   }
 
   public getCustomers(): User[] {
-    return this.userRepository.getCustomers();
+    return this.state.people.filter((person): person is User => person instanceof User);
   }
 
   public getAdmins(): Admin[] {
-    return this.state.people.filter((person): person is Admin => person instanceof Admin);
+    return this.state.people.filter(
+      (person): person is Admin => person instanceof Admin,
+    );
   }
 
   public getAllReviews(): Review[] {
-    return this.reviewService.getAllReviews();
+    return this.state.tours
+      .flatMap((tour) => tour.getReviews())
+      .sort(
+        (left, right) =>
+          right.getCreatedAt().getTime() - left.getCreatedAt().getTime(),
+      );
   }
 
-  public getCatalogMeta() {
-    return this.catalogService.getMeta();
-  }
-
-  private emit(): void {
-    this.listeners.forEach((listener) => listener());
-  }
-
-  private publishState(nextState: AppStoreState): void {
-    this.state = nextState;
-    this.emit();
-  }
-
-  private seedDefaults(): void {
-    const tours = createSeedTours();
-    this.catalogRepository.seed(tours);
-    this.catalogRepository.deleteToursByTitle(['авмвы']);
-    this.catalogRepository.syncSeedCatalog(tours);
-    this.catalogRepository.syncSeedGroupSizes(tours);
-    this.catalogRepository.syncSeedFacets(tours);
-    this.catalogRepository.syncSeedReviews(tours);
-    this.userRepository.seed(createSeedUsers());
-    this.bookingRepository.seed(createSeedBookings(tours));
-  }
-
-  private refresh(
-    result: { success: boolean; error?: string },
-    successMessage: FlashMessage | null = null,
-  ): void {
-    this.publishState(this.buildState(
-      result.success
-        ? successMessage
-        : {
-            tone: 'error',
-            text: result.error ?? 'Unknown application error.',
-          },
-      this.state.isMenuOpen,
-      this.state.filter,
-    ));
-  }
-
-  private buildState(
-    flashMessage: FlashMessage | null,
-    isMenuOpen: boolean,
-    filter: TourFilter,
-  ): AppStoreState {
-    const people = this.userRepository.getAll();
-    const session = this.sessionRepository.get();
+  private buildInitialState(): AppStoreState {
+    const people = this.readStorage(() => this.userRepository.getAll(), []);
+    const session = this.readStorage(() => this.sessionRepository.get(), null);
     const currentPerson = session
       ? people.find((person) => person.getId() === session.getUserId()) ?? null
       : null;
 
     return {
-      tours: this.catalogRepository.getAll(),
-      bookings: this.bookingRepository.getAll(),
+      tours: this.readStorage(() => this.catalogRepository.getAll(), []),
+      bookings: this.readStorage(() => this.bookingRepository.getAll(), []),
       people,
       session,
       currentPerson,
-      pricingPlans: this.pricingPlans,
-      filter,
-      isMenuOpen,
-      flashMessage,
+      currentCart: this.readStorage(() => this.resolveCart(currentPerson), null),
+      pricingPlans: this.readStorage(() => this.pricingPlanRepository.getAll(), []),
+      filter: TourFilter.createDefault(),
+      isMenuOpen: false,
+      flashMessage: this.storageErrorMessage
+        ? {
+            tone: 'error',
+            text: this.storageErrorMessage,
+          }
+        : null,
     };
+  }
+
+  private resolveCart(person: StoredPerson | null): Cart | null {
+    return person instanceof User ? this.cartRepository.getOrCreateForUser(person) : null;
+  }
+
+  private replacePerson(
+    people: StoredPerson[],
+    person: StoredPerson,
+  ): StoredPerson[] {
+    const index = people.findIndex((current) => current.getId() === person.getId());
+
+    if (index < 0) {
+      return [person, ...people];
+    }
+
+    return people.map((current) =>
+      current.getId() === person.getId() ? person : current,
+    );
+  }
+
+  private setFlash(tone: FlashTone, text: string): void {
+    this.setState({
+      flashMessage: {
+        tone,
+        text,
+      },
+    });
+  }
+
+  private runAction<T>(
+    action: () => ServiceResult<T>,
+    fallbackMessage: string,
+  ): ServiceResult<T> {
+    try {
+      return action();
+    } catch (error) {
+      const message = this.reportError(error, fallbackMessage);
+      this.setFlash('error', message);
+      return failureResult(message);
+    }
+  }
+
+  private readStorage<T>(reader: () => T, fallback: T): T {
+    try {
+      return reader();
+    } catch (error) {
+      this.storageErrorMessage = this.reportError(
+        error,
+        'Stored application data could not be loaded. Some local data was ignored.',
+      );
+      return fallback;
+    }
+  }
+
+  private reportError(error: unknown, fallbackMessage: string): string {
+    console.error(error);
+    return fallbackMessage;
+  }
+
+  private setState(nextState: Partial<AppStoreState>): void {
+    this.state = {
+      ...this.state,
+      ...nextState,
+    };
+    this.emit();
+  }
+
+  private emit(): void {
+    this.listeners.forEach((listener) => listener());
   }
 }
