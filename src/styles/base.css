@@ -1,0 +1,539 @@
+:root {
+  --color-background: #f8f8f6;
+  --color-surface: #fcfcfa;
+  --color-surface-muted: #f3f1fb;
+  --color-surface-warm: #f6f6f4;
+  --color-surface-warm-strong: #f3f3f1;
+  --color-border: rgba(14, 23, 42, 0.08);
+  --color-border-strong: rgba(255, 255, 255, 0.22);
+  --color-text: #253045;
+  --color-text-strong: #0b1533;
+  --color-text-soft: #6d7592;
+  --color-accent: #6935ff;
+  --color-accent-strong: #4e19ea;
+  --color-accent-soft: #efeaff;
+  --color-secondary: #ff5722;
+  --color-dark: #0d1326;
+  --color-dark-muted: rgba(13, 19, 38, 0.88);
+  --color-success: #1f9d55;
+  --color-danger: #dc2626;
+  --color-gold: #ffb01f;
+  --shadow-soft: 0 24px 60px rgba(27, 39, 94, 0.08);
+  --shadow-card: 0 16px 32px rgba(17, 24, 39, 0.08);
+  --radius-large: 28px;
+  --radius-medium: 20px;
+  --radius-small: 14px;
+  --container-width: 1280px;
+  --header-height: 98px;
+  --transition-fast: 0.22s ease;
+  font-family: 'Outfit', sans-serif;
+  color: var(--color-text);
+  background: var(--color-background);
+  line-height: 1.45;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--color-surface);
+  overflow-x: clip;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: 'Outfit', sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea,
+select {
+  border: 0;
+  outline: 0;
+}
+
+button {
+  cursor: pointer;
+}
+
+img {
+  display: block;
+  width: 100%;
+}
+
+#root {
+  min-height: 100vh;
+  overflow-x: clip;
+}
+
+.container {
+  width: min(var(--container-width), calc(100% - 32px));
+  margin: 0 auto;
+}
+
+.container--wide {
+  width: min(1336px, calc(100% - 32px));
+}
+
+.section {
+  position: relative;
+  padding: 96px 0;
+  background: var(--color-surface);
+}
+
+.section > .container {
+  position: relative;
+  z-index: 1;
+}
+
+.section--warm {
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-warm) 0%,
+    var(--color-surface-warm-strong) 100%
+  );
+}
+
+.section--warm::before,
+.section--warm::after,
+.section--intro::before,
+.section--intro::after,
+.section--discover::before,
+.section--discover::after,
+.section--testimonials::before,
+.section--testimonials::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.section--warm::before {
+  top: 54px;
+  right: 3%;
+  width: 180px;
+  height: 110px;
+  background: url('../../public/assets/decor/decor-pyramids.webp') center/contain
+    no-repeat;
+  opacity: 0.28;
+  filter: contrast(1.08) brightness(0.9);
+}
+
+.section--warm::after {
+  left: 2%;
+  bottom: 34px;
+  width: 96px;
+  height: 220px;
+  background: url('../../public/assets/decor/decor-eiffel.webp') center/contain
+    no-repeat;
+  opacity: 0.2;
+  filter: contrast(1.06) brightness(0.92);
+}
+
+.section--intro {
+  padding-top: 188px;
+  padding-bottom: 168px;
+}
+
+.section--intro::before {
+  top: 34px;
+  left: 1.5%;
+  right: auto;
+  width: 300px;
+  height: 170px;
+  background: url('../../public/assets/decor/decor-plane-line.webp') center/contain
+    no-repeat;
+  opacity: 0.34;
+  filter: contrast(1.14) brightness(0.72);
+}
+
+.section--intro::after {
+  display: none;
+}
+
+.section--discover::before {
+  display: none;
+}
+
+.section--discover::after {
+  top: 50%;
+  bottom: auto;
+  left: -302px;
+  right: auto;
+  width: 836px;
+  height: 632px;
+  background: url('../../public/assets/decor/decor-map-world.webp') left center/contain
+    no-repeat;
+  opacity: 0.18;
+  filter: grayscale(1) brightness(0.72) contrast(1.06);
+  transform: translateY(-50%) scaleX(-1);
+}
+
+.section--warm-tour-grid::before {
+  display: none;
+}
+
+.section--warm-tour-grid::after {
+  top: 0;
+  left: -54px;
+  width: 724px;
+  height: 526px;
+  background: url('../../public/assets/decor/decor-map-asia.webp') left top/contain
+    no-repeat;
+  opacity: 0.24;
+  filter: grayscale(1) brightness(0.72) contrast(1.06);
+}
+
+.section--testimonials::before {
+  right: -82px;
+  bottom: -42px;
+  width: 764px;
+  height: 764px;
+  background: url('../../public/assets/decor/decor-map-americas.webp') right bottom/contain
+    no-repeat;
+  opacity: 0.2;
+  filter: grayscale(1) brightness(0.74) contrast(1.04);
+}
+
+.section--testimonials::after {
+  left: 2.8%;
+  bottom: -28px;
+  width: 196px;
+  height: 410px;
+  background: url('../../public/assets/decor/decor-eiffel.webp') center/contain
+    no-repeat;
+  opacity: 0.38;
+  filter: contrast(1.08) brightness(0.92);
+}
+
+.section--warm-tour-grid {
+  padding-top: 112px;
+  padding-bottom: 126px;
+}
+
+.section--discover {
+  padding-top: 108px;
+  padding-bottom: 122px;
+}
+
+.section--testimonials {
+  background: linear-gradient(
+    180deg,
+    var(--color-surface-warm) 0%,
+    var(--color-surface-warm-strong) 100%
+  );
+  padding-top: 136px;
+  padding-bottom: 228px;
+}
+
+.section-heading {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 40px;
+}
+
+.section-heading--center {
+  justify-items: center;
+  text-align: center;
+}
+
+.section-heading--left {
+  justify-items: flex-start;
+  text-align: left;
+}
+
+.section-heading__eyebrow {
+  margin: 0;
+  color: var(--color-accent);
+  font-family: 'Caveat', cursive;
+  font-size: 1.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.section-heading h1,
+.section-heading h2,
+.home-hero h1,
+.detail-topbar h1,
+.auth-card h1,
+.about-intro__content h2,
+.contact-form-card h2,
+.detail-panel h2,
+.cart-summary h2,
+.dashboard-card h2 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: clamp(2rem, 3vw, 3.4rem);
+  line-height: 1.05;
+}
+
+.section-heading--home-compact h2 {
+  font-size: clamp(1.76rem, 2.45vw, 2.8rem);
+}
+
+.section-heading__description,
+.home-hero__subtitle,
+.intro-grid__content p,
+.discover-grid__content p,
+.feature-card p,
+.detail-panel p,
+.dashboard-card p,
+.contact-form-card p,
+.contact-card p,
+.auth-card p,
+.not-found p {
+  margin: 0;
+  color: var(--color-text-soft);
+  font-size: 1.02rem;
+}
+
+.section-heading__eyebrow {
+  color: var(--color-accent);
+  font-family: 'Caveat', cursive;
+  font-size: 1.72rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 24px;
+  border-radius: 14px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition:
+    transform var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+}
+
+.button:hover {
+  transform: translateY(-2px);
+}
+
+.button--primary {
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  color: #ffffff;
+  box-shadow: 0 16px 28px rgba(105, 53, 255, 0.24);
+}
+
+.button--ghost {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+}
+
+.button--search {
+  min-height: 58px;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-strong));
+  color: #ffffff;
+  box-shadow: 0 16px 28px rgba(105, 53, 255, 0.22);
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  border: 0;
+  transition: color var(--transition-fast);
+}
+
+.icon-button:hover {
+  background: transparent;
+  color: var(--color-accent);
+}
+
+.text-button {
+  padding: 0;
+  background: transparent;
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.rating-stars {
+  display: inline-flex;
+  gap: 3px;
+  color: #d1d5db;
+}
+
+.rating-stars .is-filled {
+  fill: var(--color-gold);
+  color: var(--color-gold);
+}
+
+.empty-state,
+.dashboard-card,
+.contact-card,
+.contact-form-card,
+.pricing-card,
+.feature-card,
+.testimonial-card,
+.tour-filters,
+.cart-summary,
+.auth-card,
+.detail-panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-large);
+  box-shadow: var(--shadow-card);
+}
+
+.empty-state {
+  display: grid;
+  gap: 14px;
+  justify-items: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.empty-state h3 {
+  margin: 0;
+  color: var(--color-text-strong);
+  font-size: 2rem;
+}
+
+.form-error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1800px) and (min-width: 1025px) {
+  html {
+    font-size: 87.5%;
+  }
+
+  :root {
+    --container-width: 1200px;
+    --header-height: 78px;
+  }
+
+  .container {
+    width: min(var(--container-width), calc(100% - 48px));
+  }
+
+  .container--wide {
+    width: min(1216px, calc(100% - 48px));
+  }
+
+  .section {
+    padding: 68px 0;
+  }
+
+  .section--intro {
+    padding-top: 128px;
+    padding-bottom: 108px;
+  }
+
+  .section--warm-tour-grid {
+    padding-top: 76px;
+    padding-bottom: 84px;
+  }
+
+  .section--discover {
+    padding-top: 76px;
+    padding-bottom: 86px;
+  }
+
+  .section--testimonials {
+    padding-top: 88px;
+    padding-bottom: 134px;
+  }
+
+  .section-heading {
+    gap: 8px;
+    margin-bottom: 26px;
+  }
+
+  .section-heading h1,
+  .section-heading h2,
+  .detail-topbar h1,
+  .auth-card h1,
+  .about-intro__content h2,
+  .contact-form-card h2,
+  .detail-panel h2,
+  .cart-summary h2,
+  .dashboard-card h2 {
+    font-size: clamp(1.72rem, 2.1vw, 2.55rem);
+  }
+
+  .section-heading--home-compact h2 {
+    font-size: clamp(1.5rem, 1.95vw, 2.12rem);
+  }
+
+  .section-heading__description,
+  .intro-grid__content p,
+  .discover-grid__content p,
+  .feature-card p,
+  .detail-panel p,
+  .dashboard-card p,
+  .contact-form-card p,
+  .contact-card p,
+  .auth-card p,
+  .not-found p {
+    font-size: 0.94rem;
+  }
+
+  .button {
+    padding: 12px 20px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .section {
+    padding: 76px 0;
+  }
+
+  .section--intro {
+    padding-top: 146px;
+  }
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: min(var(--container-width), calc(100% - 20px));
+  }
+
+  .section {
+    padding: 64px 0;
+  }
+
+  .section-heading__eyebrow {
+    font-size: 1.46rem;
+  }
+
+  .button,
+  .button--search {
+    width: 100%;
+  }
+}
