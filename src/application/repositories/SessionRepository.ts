@@ -9,7 +9,12 @@ export class SessionRepository {
     }
 
     const raw = window.localStorage.getItem(this.storageKey);
-    return raw ? AuthSession.restore(JSON.parse(raw) as AuthSessionPrimitives) : null;
+
+    if (!raw) {
+      return null;
+    }
+
+    return AuthSession.restore(JSON.parse(raw) as AuthSessionPrimitives);
   }
 
   public save(session: AuthSession): void {
@@ -17,10 +22,7 @@ export class SessionRepository {
       return;
     }
 
-    window.localStorage.setItem(
-      this.storageKey,
-      JSON.stringify(session.toPrimitives()),
-    );
+    window.localStorage.setItem(this.storageKey, JSON.stringify(session.toPrimitives()));
   }
 
   public clear(): void {
