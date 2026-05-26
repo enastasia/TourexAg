@@ -1,7 +1,6 @@
 import { BaseEntity } from '../shared/BaseEntity';
 import type { ValidationError } from '../shared/ValidationError';
 import type { PersonRole } from '../../shared/types/domain';
-import { hashPassword } from '../../shared/utils/security';
 
 export interface PersonPrimitives {
   id: string;
@@ -51,8 +50,8 @@ export abstract class Person<
     return this.avatar;
   }
 
-  public matchesPassword(value: string): boolean {
-    return this.passwordHash === hashPassword(value);
+  public matchesPasswordHash(passwordHash: string): boolean {
+    return this.passwordHash === passwordHash;
   }
 
   public updateProfile(fullName: string, phone: string): void {

@@ -2,6 +2,7 @@ import type { Review } from '../../domain/reviews/Review';
 import { Tour } from '../../domain/catalog/Tour';
 import { TourFilter } from '../../domain/catalog/TourFilter';
 import { CatalogRepository } from '../repositories/CatalogRepository';
+import { TourMatcher } from './TourMatcher';
 
 export interface CatalogPage {
   items: Tour[];
@@ -29,7 +30,10 @@ export interface CatalogMeta {
 }
 
 export class CatalogService {
-  public constructor(private readonly catalogRepository: CatalogRepository) {}
+  public constructor(
+    private readonly catalogRepository: CatalogRepository,
+    private readonly tourMatcher: TourMatcher,
+  ) {}
 
   public getAllTours(): Tour[] {
     return this.catalogRepository.getAll();
@@ -39,9 +43,9 @@ export class CatalogService {
     return this.catalogRepository.findBySlug(slug);
   }
 
-  public getCatalogPage(filter: TourFilter): CatalogPage {
+  public getCatalogPage(filter: TourFilter, sourceTours?: Tour[]): CatalogPage {
     const filtered = this.sortTours(
-      this.catalogRepository.getAll().filter((tour) => tour.matches(filter)),
+      this.getTours(sourceTours).filter((tour) => this.tourMatcher.matches(tour, filter)),
       filter,
     );
     const pageSize = filter.getPageSize();
@@ -57,23 +61,22 @@ export class CatalogService {
     };
   }
 
-  public getFeaturedTours(limit: number): Tour[] {
-    return this.catalogRepository
-      .getAll()
+  public getFeaturedTours(limit: number, sourceTours?: Tour[]): Tour[] {
+    return this.getTours(sourceTours)
       .filter((tour) => tour.getKind() !== 'standard')
       .slice(0, limit);
   }
 
-  public getPopularTours(limit: number): Tour[] {
-    return [...this.catalogRepository.getAll()]
+  public getPopularTours(limit: number, sourceTours?: Tour[]): Tour[] {
+    return [...this.getTours(sourceTours)]
       .sort((left, right) => right.getAverageRating() - left.getAverageRating())
       .slice(0, limit);
   }
 
-  public getTopDestinations(limit: number): DestinationSummary[] {
+  public getTopDestinations(limit: number, sourceTours?: Tour[]): DestinationSummary[] {
     const destinationMap = new Map<string, DestinationSummary>();
 
-    this.catalogRepository.getAll().forEach((tour) => {
+    this.getTours(sourceTours).forEach((tour) => {
       const destination = tour.getDestination();
       const current = destinationMap.get(destination.getId());
 
@@ -95,9 +98,8 @@ export class CatalogService {
       .slice(0, limit);
   }
 
-  public getTestimonials(limit: number): Review[] {
-    return this.catalogRepository
-      .getAll()
+  public getTestimonials(limit: number, sourceTours?: Tour[]): Review[] {
+    return this.getTours(sourceTours)
       .flatMap((tour) => tour.getReviews())
       .sort(
         (left, right) =>
@@ -106,8 +108,8 @@ export class CatalogService {
       .slice(0, limit);
   }
 
-  public getMeta(): CatalogMeta {
-    const tours = this.catalogRepository.getAll();
+  public getMeta(sourceTours?: Tour[]): CatalogMeta {
+    const tours = this.getTours(sourceTours);
     const destinationsMap = new Map<string, { id: string; label: string }>();
 
     tours.forEach((tour) => {
@@ -138,6 +140,10 @@ export class CatalogService {
 
   public deleteTour(tourId: string): void {
     this.catalogRepository.deleteTour(tourId);
+  }
+
+  private getTours(sourceTours?: Tour[]): Tour[] {
+    return sourceTours ?? this.catalogRepository.getAll();
   }
 
   private sortTours(tours: Tour[], filter: TourFilter): Tour[] {

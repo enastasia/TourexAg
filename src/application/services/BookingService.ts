@@ -1,6 +1,8 @@
 import type { BookingRequest } from '../../domain/booking/BookingRequest';
+import type { Cart } from '../../domain/booking/Cart';
 import { User } from '../../domain/people/User';
 import { BookingRepository } from '../repositories/BookingRepository';
+import { CartRepository } from '../repositories/CartRepository';
 import { CatalogRepository } from '../repositories/CatalogRepository';
 import { UserRepository } from '../repositories/UserRepository';
 import { failureResult, successResult, type ServiceResult } from './ServiceResult';
@@ -8,6 +10,7 @@ import { failureResult, successResult, type ServiceResult } from './ServiceResul
 export class BookingService {
   public constructor(
     private readonly userRepository: UserRepository,
+    private readonly cartRepository: CartRepository,
     private readonly catalogRepository: CatalogRepository,
     private readonly bookingRepository: BookingRepository,
   ) {}
@@ -34,8 +37,10 @@ export class BookingService {
       return failureResult(bookingErrors[0].message);
     }
 
-    user.addBookingToCart(tour.createBooking(userId, request));
-    this.userRepository.savePerson(user);
+    const cart = this.requireCart(user);
+    cart.addLine(tour.createBooking(userId, request));
+    this.cartRepository.saveCart(cart);
+
     return successResult(undefined);
   }
 
@@ -50,13 +55,17 @@ export class BookingService {
       return failureResult('Only logged in travelers can edit cart items.');
     }
 
-    const cartBooking = user
-      .getCart()
+    const cart = this.requireCart(user);
+    const cartBooking = cart
       .getLines()
       .find((line) => line.getId() === bookingId);
 
     if (!cartBooking) {
       return failureResult('Cart item not found.');
+    }
+
+    if (cartBooking.getStatus() !== 'draft') {
+      return failureResult('Only draft cart items can be edited.');
     }
 
     const tour = this.catalogRepository.findById(cartBooking.getTourId());
@@ -72,8 +81,8 @@ export class BookingService {
     }
 
     cartBooking.updateRequest(request, tour.quote(request).totalPrice);
-    user.getCart().replaceLine(cartBooking);
-    this.userRepository.savePerson(user);
+    cart.replaceLine(cartBooking);
+    this.cartRepository.saveCart(cart);
 
     return successResult(undefined);
   }
@@ -85,8 +94,9 @@ export class BookingService {
       return failureResult('Only logged in travelers can edit cart items.');
     }
 
-    user.removeBookingFromCart(bookingId);
-    this.userRepository.savePerson(user);
+    const cart = this.requireCart(user);
+    cart.removeLine(bookingId);
+    this.cartRepository.saveCart(cart);
 
     return successResult(undefined);
   }
@@ -98,15 +108,21 @@ export class BookingService {
       return failureResult('Only logged in travelers can check out.');
     }
 
-    const currentLines = user.clearCart();
+    const cart = this.requireCart(user);
+    const currentLines = cart.getLines();
 
     if (currentLines.length === 0) {
       return failureResult('Your cart is empty.');
     }
 
+    if (currentLines.some((booking) => booking.getStatus() !== 'draft')) {
+      return failureResult('Only draft cart items can be checked out.');
+    }
+
+    cart.clear();
     currentLines.forEach((booking) => booking.confirm());
     this.bookingRepository.addMany(currentLines);
-    this.userRepository.savePerson(user);
+    this.cartRepository.saveCart(cart);
 
     return successResult(currentLines.length);
   }
@@ -114,5 +130,9 @@ export class BookingService {
   private requireUser(userId: string): User | null {
     const person = this.userRepository.findById(userId);
     return person instanceof User ? person : null;
+  }
+
+  private requireCart(user: User): Cart {
+    return this.cartRepository.getOrCreateForUser(user);
   }
 }
