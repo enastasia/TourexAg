@@ -157,7 +157,7 @@ export const HeroSearchPanel = ({ compact = false }: HeroSearchPanelProps) => {
                 })
               }
             >
-              <option value="">Where are you going...</option>
+              <option value="">Where are you going</option>
               {meta.destinations.map((destination) => (
                 <option key={destination.id} value={destination.id}>
                   {destination.label}
@@ -173,6 +173,7 @@ export const HeroSearchPanel = ({ compact = false }: HeroSearchPanelProps) => {
             <CalendarDays size={16} />
             <input
               type="date"
+              lang="en"
               value={draft.checkInDate}
               onChange={(event) =>
                 dispatch({
@@ -190,6 +191,7 @@ export const HeroSearchPanel = ({ compact = false }: HeroSearchPanelProps) => {
             <CalendarDays size={16} />
             <input
               type="date"
+              lang="en"
               value={draft.checkOutDate}
               min={draft.checkInDate ? minimumCheckOutDate : undefined}
               onChange={(event) =>
@@ -210,6 +212,7 @@ export const HeroSearchPanel = ({ compact = false }: HeroSearchPanelProps) => {
               type="number"
               min={1}
               max={12}
+              placeholder="Enter guests count"
               value={draft.guests}
               onChange={(event) =>
                 dispatch({

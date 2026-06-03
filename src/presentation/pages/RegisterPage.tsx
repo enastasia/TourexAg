@@ -1,6 +1,10 @@
+import { Eye, EyeOff, Mail, Lock, Phone, UserPlus, User } from 'lucide-react';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Person } from '../../domain/people/Person';
 import { useAppStore } from '../hooks/useAppStore';
+
+const registerHeroImage = '/assets/hero-slider/slide-3.jpg';
 
 export const RegisterPage = () => {
   const { store } = useAppStore();
@@ -13,9 +17,30 @@ export const RegisterPage = () => {
     confirmPassword: '',
   });
   const [localError, setLocalError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (form.fullName.trim().length < 3) {
+      setLocalError('Full name must contain at least 3 characters.');
+      return;
+    }
+
+    if (!Person.isValidEmail(form.email)) {
+      setLocalError('Invalid email format. Use format: user@example.com');
+      return;
+    }
+
+    if (!Person.isValidPhone(form.phone)) {
+      setLocalError('Invalid phone number. Use international format with country code (e.g. +380 XX XXX XXXX).');
+      return;
+    }
+
+    if (form.password.length < 4) {
+      setLocalError('Password must contain at least 4 characters.');
+      return;
+    }
 
     if (form.password !== form.confirmPassword) {
       setLocalError('Passwords do not match.');
@@ -32,87 +57,126 @@ export const RegisterPage = () => {
 
     if (result.success) {
       navigate('/account', { replace: true });
+    } else {
+      setLocalError(result.error ?? 'Unable to create account.');
     }
   };
 
   return (
-    <section className="section auth-section">
-      <div className="container auth-grid">
-        <div className="auth-card">
-          <p className="section-heading__eyebrow">Register</p>
-          <h1>Create Your Travel Account</h1>
-          <p>
-            Registration creates a real `User` domain entity with its own wishlist,
-            cart and session lifecycle.
-          </p>
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <input
-              type="text"
-              placeholder="Full Name"
-              value={form.fullName}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, fullName: event.target.value }))
-              }
-              required
-            />
-            <input
-              type="email"
-              placeholder="E-mail Address"
-              value={form.email}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, email: event.target.value }))
-              }
-              required
-            />
-            <input
-              type="tel"
-              placeholder="Phone"
-              value={form.phone}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, phone: event.target.value }))
-              }
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={form.password}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, password: event.target.value }))
-              }
-              required
-            />
-            <input
-              type="password"
-              placeholder="Confirm Password"
-              value={form.confirmPassword}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  confirmPassword: event.target.value,
-                }))
-              }
-              required
-            />
+    <div className="auth-split">
+      <div
+        className="auth-split__hero"
+        style={{ backgroundImage: `url(${registerHeroImage})` }}
+      >
+        <div className="auth-split__hero-overlay" />
+      </div>
+
+      <div className="auth-split__form-side">
+        <div className="auth-split__form-wrapper">
+          <div className="auth-split__brand">
+            <Link to="/">Tourex</Link>
+          </div>
+
+          <div className="auth-split__header">
+            <h1>Create Account</h1>
+            <p>Join Tourex and start planning your trips</p>
+          </div>
+
+          <form className="auth-split__form" onSubmit={handleSubmit}>
+            <div className="auth-split__input-group">
+              <User size={18} />
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={form.fullName}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, fullName: event.target.value }))
+                }
+                required
+              />
+            </div>
+
+            <div className="auth-split__input-group">
+              <Mail size={18} />
+              <input
+                type="email"
+                placeholder="E-mail Address"
+                value={form.email}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, email: event.target.value }))
+                }
+                required
+              />
+            </div>
+
+            <div className="auth-split__input-group">
+              <Phone size={18} />
+              <input
+                type="tel"
+                placeholder="+380 XX XXX XXXX"
+                value={form.phone}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, phone: event.target.value }))
+                }
+                required
+              />
+            </div>
+
+            <div className="auth-split__input-group">
+              <Lock size={18} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Password"
+                value={form.password}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, password: event.target.value }))
+                }
+                required
+              />
+              <button
+                type="button"
+                className="auth-split__toggle-pw"
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+
+            <div className="auth-split__input-group">
+              <Lock size={18} />
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Confirm Password"
+                value={form.confirmPassword}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    confirmPassword: event.target.value,
+                  }))
+                }
+                required
+              />
+            </div>
+
             {localError ? <p className="form-error">{localError}</p> : null}
-            <button className="button button--primary" type="submit">
+
+            <button className="button button--primary auth-split__submit" type="submit">
+              <UserPlus size={18} />
               Create Account
             </button>
           </form>
-          <p className="auth-card__footer">
-            Already registered? <Link to="/login">Login here</Link>
-          </p>
-        </div>
 
-        <aside className="auth-card auth-card--muted">
-          <h2>Why This Matters</h2>
-          <ul className="feature-bullets">
-            <li>Wishlist and cart are owned by the User class, not by view state.</li>
-            <li>Routes react to the active AuthSession and the current role.</li>
-            <li>Bookings become validated domain objects before they reach the cart.</li>
-          </ul>
-        </aside>
+          <p className="auth-split__footer">
+            Already have an account?{' '}
+            <Link to="/login">Sign in</Link>
+          </p>
+
+          <Link to="/" className="auth-split__guest-link">
+            Continue without an account
+          </Link>
+        </div>
       </div>
-    </section>
+    </div>
   );
 };

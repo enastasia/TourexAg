@@ -114,6 +114,7 @@ export const BookingSidebar = ({ tour }: BookingSidebarProps) => {
         <CalendarDays size={16} />
         <input
           type="date"
+          lang="en"
           value={travelDate}
           min={toIsoDate(new Date())}
           onChange={(event) => setTravelDate(event.target.value)}
@@ -147,7 +148,7 @@ export const BookingSidebar = ({ tour }: BookingSidebarProps) => {
         <div className="detail-booking__ticket-row">
           <div>
             <strong>Adult</strong>
-            <span>(13+ years) {unitPrices.adults}</span>
+            <span>{unitPrices.adults}</span>
           </div>
           <select
             value={adults}
@@ -168,7 +169,7 @@ export const BookingSidebar = ({ tour }: BookingSidebarProps) => {
         <div className="detail-booking__ticket-row">
           <div>
             <strong>Children</strong>
-            <span>(3-12 years) {unitPrices.children}</span>
+            <span>{unitPrices.children}</span>
           </div>
           <select
             value={children}
@@ -187,34 +188,35 @@ export const BookingSidebar = ({ tour }: BookingSidebarProps) => {
         </div>
       </div>
 
-      <div className="detail-booking__section">
-        <h4>Add Extra:</h4>
+      {tour.getKind() === 'standard' && (
+        <div className="detail-booking__section">
+          <h4>Add Extra:</h4>
 
-        <label className="detail-booking__extra-row">
-          <span>
-            <input
-              type="checkbox"
-              checked={servicePerBooking}
-              onChange={(event) => setServicePerBooking(event.target.checked)}
-            />
-            Service Per Booking
-          </span>
-          <strong>$30.00</strong>
-        </label>
+          <label className="detail-booking__extra-row">
+            <span>
+              <input
+                type="checkbox"
+                checked={servicePerBooking}
+                onChange={(event) => setServicePerBooking(event.target.checked)}
+              />
+              Service Per Booking
+            </span>
+            <strong>$30.00</strong>
+          </label>
 
-        <label className="detail-booking__extra-row">
-          <span>
-            <input
-              type="checkbox"
-              checked={servicePerPerson}
-              onChange={(event) => setServicePerPerson(event.target.checked)}
-            />
-            Service Per Person
-          </span>
-          <strong>$20.00</strong>
-        </label>
-
-      </div>
+          <label className="detail-booking__extra-row">
+            <span>
+              <input
+                type="checkbox"
+                checked={servicePerPerson}
+                onChange={(event) => setServicePerPerson(event.target.checked)}
+              />
+              Service Per Person
+            </span>
+            <strong>$20.00</strong>
+          </label>
+        </div>
+      )}
 
       {requiredTourParameterFields.length > 0 && (
         <div className="detail-booking__section detail-booking__section--parameters">

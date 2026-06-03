@@ -116,6 +116,11 @@ img {
   );
 }
 
+.section--no-decor::before,
+.section--no-decor::after {
+  display: none !important;
+}
+
 .section--warm::before,
 .section--warm::after,
 .section--intro::before,
@@ -158,8 +163,8 @@ img {
 }
 
 .section--intro::before {
-  top: 34px;
-  left: 1.5%;
+  top: -10px;
+  left: -5%;
   right: auto;
   width: 300px;
   height: 170px;
@@ -218,7 +223,7 @@ img {
 }
 
 .section--testimonials::after {
-  left: 2.8%;
+  left: -1%;
   bottom: -28px;
   width: 196px;
   height: 410px;
@@ -246,6 +251,7 @@ img {
   );
   padding-top: 136px;
   padding-bottom: 228px;
+  overflow: hidden;
 }
 
 .section-heading {
@@ -278,7 +284,6 @@ img {
 .home-hero h1,
 .detail-topbar h1,
 .auth-card h1,
-.about-intro__content h2,
 .contact-form-card h2,
 .detail-panel h2,
 .cart-summary h2,
@@ -356,6 +361,7 @@ img {
 }
 
 .icon-button {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -479,7 +485,6 @@ img {
   .section-heading h2,
   .detail-topbar h1,
   .auth-card h1,
-  .about-intro__content h2,
   .contact-form-card h2,
   .detail-panel h2,
   .cart-summary h2,

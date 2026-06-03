@@ -6,39 +6,21 @@ import { HeroSearchPanel } from '../components/common/HeroSearchPanel';
 import { TourCard } from '../components/tours/TourCard';
 import { TourFiltersSidebar } from '../components/tours/TourFiltersSidebar';
 
-const catalogTourImagesByPage: Record<number, readonly string[]> = {
-  1: [
-    '/assets/tours/catalog-page-1-tour-01.jpg',
-    '/assets/tours/catalog-page-1-tour-02.jpg',
-    '/assets/tours/catalog-page-1-tour-03.jpg',
-    '/assets/tours/catalog-page-1-tour-04.jpg',
-    '/assets/tours/catalog-page-1-tour-05.jpg',
-    '/assets/tours/catalog-page-1-tour-06.jpg',
-    '/assets/tours/catalog-page-1-tour-07.jpg',
-    '/assets/tours/catalog-page-1-tour-08.jpg',
-    '/assets/tours/catalog-page-1-tour-09.jpg',
-    '/assets/tours/catalog-page-1-tour-10.jpg',
-    '/assets/tours/catalog-page-1-tour-11.jpg',
-    '/assets/tours/catalog-page-1-tour-12.jpg',
-  ],
-};
-
-const toursHeroImage = '/assets/tours/tours-hero-selected.jpg';
+const toursHeroImage = '/assets/hero-slider/slide-7.jpg';
 
 export const ToursPage = () => {
   const { store, state } = useAppStore();
   const catalogPage = store.getCatalogPage();
-  const catalogTourImages = catalogTourImagesByPage[catalogPage.currentPage] ?? [];
 
   return (
     <>
       <BreadcrumbHero
         eyebrow="Discover New Journeys"
         title="Let's Tour The World"
-        image={toursHeroImage}
-        imagePosition="center 28%"
+        image="/assets/hero-slider/slide-6.jpg"
+        imagePosition="center 65%"
         className="breadcrumb-hero--tours"
-        overlay="soft"
+        overlay="none"
         crumbs={[
           { label: 'Home', href: '/' },
           { label: 'Tour Grid' },
@@ -105,11 +87,10 @@ export const ToursPage = () => {
             </div>
 
             <div className="tour-grid tour-grid--catalog">
-              {catalogPage.items.map((tour, index) => (
+              {catalogPage.items.map((tour) => (
                 <TourCard
                   key={tour.getId()}
                   tour={tour}
-                  imageOverride={catalogTourImages[index]}
                 />
               ))}
             </div>

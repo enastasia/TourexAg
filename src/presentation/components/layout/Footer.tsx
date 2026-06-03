@@ -3,6 +3,7 @@ import {
   Image,
   MapPin,
   PhoneCall,
+  Plane,
   PinIcon,
   Play,
   Send,
@@ -14,7 +15,6 @@ const linkColumns = [
     title: 'Quick Links',
     links: [
       { label: 'Home', href: '/' },
-      { label: 'About Us', href: '/about' },
       { label: 'Tour Guide', href: '/tours' },
       { label: 'Contact Us', href: '/contact' },
     ],
@@ -22,7 +22,6 @@ const linkColumns = [
   {
     title: 'Utility Pages',
     links: [
-      { label: 'Pricing Plan', href: '/pricing' },
       { label: 'Wishlist', href: '/wishlist' },
       { label: 'Login', href: '/login' },
       { label: 'Register', href: '/register' },
@@ -35,7 +34,7 @@ export const Footer = () => (
     <div className="container site-footer__grid">
       <div className="site-footer__brand">
         <div className="site-logo site-logo--footer">
-          <span className="site-logo__pin">9</span>
+          <span className="site-logo__pin"><Plane size={26} /></span>
           <span>
             Tourex
             <small>A Travel Agency</small>

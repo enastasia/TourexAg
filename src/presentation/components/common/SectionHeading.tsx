@@ -1,5 +1,5 @@
 interface SectionHeadingProps {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   description?: string;
   align?: 'left' | 'center';
@@ -14,7 +14,7 @@ export const SectionHeading = ({
   className = '',
 }: SectionHeadingProps) => (
   <div className={`section-heading section-heading--${align} ${className}`.trim()}>
-    <p className="section-heading__eyebrow">{eyebrow}</p>
+    {eyebrow ? <p className="section-heading__eyebrow">{eyebrow}</p> : null}
     <h2>{title}</h2>
     {description ? <p className="section-heading__description">{description}</p> : null}
   </div>

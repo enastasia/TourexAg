@@ -224,7 +224,7 @@ export const TourFiltersSidebar = () => {
               min={1}
               max={12}
               inputMode="numeric"
-              placeholder="Enter guests count (1-12)"
+              placeholder="Enter guests count"
               value={filter.getGuests() === 0 ? '' : filter.getGuests()}
               onChange={(event) => handleGuestsInput(event.target.value)}
             />

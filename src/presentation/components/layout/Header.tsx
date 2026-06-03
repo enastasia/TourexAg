@@ -1,5 +1,6 @@
 import { LogOut, Menu, PhoneCall, Plane, ShoppingCart, UserRound } from 'lucide-react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Admin } from '../../../domain/people/Admin';
 import { User } from '../../../domain/people/User';
 import { useAppStore } from '../../hooks/useAppStore';
 
@@ -11,17 +12,11 @@ export const Header = () => {
     store,
   } = useAppStore();
 
-  const overlayHeader =
-    pathname === '/' ||
-    pathname === '/tours' ||
-    pathname === '/about' ||
-    pathname === '/pricing' ||
-    pathname === '/contact' ||
-    pathname === '/wishlist' ||
-    pathname.startsWith('/tours/');
+  const overlayHeader = true;
+  const isAdmin = currentPerson instanceof Admin;
 
   const cartCount = currentPerson instanceof User ? currentCart?.getItemsCount() ?? 0 : 0;
-  const accountHref = currentPerson?.getRole() === 'admin' ? '/admin' : '/account';
+  const accountHref = isAdmin ? '/admin' : '/account';
   const accountLabel = currentPerson ? 'Account' : 'Login';
   const handleLogout = () => {
     store.logout();
@@ -44,9 +39,7 @@ export const Header = () => {
         <nav className="site-nav">
           <NavLink to="/">Home</NavLink>
           <NavLink to="/tours">Tour Grid</NavLink>
-          <NavLink to="/about">About Us</NavLink>
-          <NavLink to="/pricing">Pricing Plan</NavLink>
-          <NavLink to="/wishlist">Wishlist</NavLink>
+          {!isAdmin && <NavLink to="/wishlist">Wishlist</NavLink>}
           <NavLink to="/contact">Contact</NavLink>
         </nav>
 
@@ -58,15 +51,17 @@ export const Header = () => {
               <strong>+123 5959 66</strong>
             </span>
           </a>
-          <button
-            type="button"
-            className="icon-button"
-            onClick={() => navigate('/cart')}
-            aria-label="Cart"
-          >
-            <ShoppingCart size={20} />
-            {cartCount > 0 ? <span className="badge-pill">{cartCount}</span> : null}
-          </button>
+          {!isAdmin && (
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => navigate('/cart')}
+              aria-label="Cart"
+            >
+              <ShoppingCart size={20} />
+              {cartCount > 0 ? <span className="badge-pill">{cartCount}</span> : null}
+            </button>
+          )}
           <button
             type="button"
             className="header-account-button"

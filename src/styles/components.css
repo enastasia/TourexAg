@@ -14,12 +14,15 @@
 
 .hero-search__fields label,
 .booking-sidebar__field,
-.contact-form input,
+.contact-form input:not([type="checkbox"]),
 .contact-form textarea,
 .auth-form input,
 .admin-form input,
 .admin-form textarea,
 .admin-form select,
+.admin-builder__form input,
+.admin-builder__form textarea,
+.admin-builder__form select,
 .cart-line__edit-grid label,
 .review-form select {
   display: grid;
@@ -31,12 +34,15 @@
 .hero-search__field,
 .booking-sidebar__field input,
 .booking-sidebar__field select,
-.contact-form input,
+.contact-form input:not([type="checkbox"]),
 .contact-form textarea,
 .auth-form input,
 .admin-form input,
 .admin-form textarea,
 .admin-form select,
+.admin-builder__form input,
+.admin-builder__form textarea,
+.admin-builder__form select,
 .catalog-toolbar__search,
 .catalog-toolbar select,
 .cart-line__edit-grid input,
@@ -65,12 +71,15 @@
 .hero-search__field input,
 .booking-sidebar input,
 .booking-sidebar select,
-.contact-form input,
+.contact-form input:not([type="checkbox"]),
 .contact-form textarea,
 .auth-form input,
 .admin-form input,
 .admin-form textarea,
 .admin-form select,
+.admin-builder__form input,
+.admin-builder__form textarea,
+.admin-builder__form select,
 .catalog-toolbar input,
 .catalog-toolbar select,
 .cart-line__edit-grid input,
@@ -84,6 +93,7 @@
 
 .contact-form textarea,
 .admin-form textarea,
+.admin-builder__form textarea,
 .review-form textarea {
   min-height: 150px;
   padding: 18px 16px;
@@ -131,7 +141,7 @@
 
 .tour-card__media {
   position: relative;
-  aspect-ratio: 1.92;
+  aspect-ratio: 2.1;
   overflow: hidden;
 }
 
@@ -429,6 +439,15 @@
   align-items: center;
   gap: 10px;
   font-size: 0.92rem;
+}
+
+.contact-form__checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  min-height: auto;
+  flex-shrink: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
 }
 
 .tour-filters__rating-option {
@@ -944,8 +963,7 @@
 }
 
 .testimonial-card__author img,
-.review-item img,
-.account-page__header img {
+.review-item img {
   width: 68px;
   height: 68px;
   border-radius: 999px;
@@ -1008,16 +1026,12 @@
 
 .credentials-list,
 .feature-bullets,
-.admin-list,
-.booking-history,
 .site-footer__links {
   display: grid;
   gap: 14px;
 }
 
-.credentials-list article,
-.admin-list > div,
-.booking-history > div {
+.credentials-list article {
   display: grid;
   gap: 6px;
 }
@@ -1049,6 +1063,9 @@
   .admin-form input,
   .admin-form textarea,
   .admin-form select,
+  .admin-builder__form input,
+  .admin-builder__form textarea,
+  .admin-builder__form select,
   .catalog-toolbar__search,
   .catalog-toolbar select,
   .cart-line__edit-grid input,

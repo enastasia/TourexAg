@@ -26,34 +26,10 @@ const scoreLabels = {
   rooms: 'Rooms',
 } as const;
 
-const detailHeroCandidates = [
-  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1472214103451-9374bd1c798e?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1439066615861-d1af74d74000?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1519046904884-53103b34b206?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1500835556837-99ac94a94552?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=1800&q=80',
-  'https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=1800&q=80',
-  'https://images.pexels.com/photos/100362/pexels-photo-100362.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/128458/pexels-photo-128458.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/1479760/pexels-photo-1479760.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/141783/pexels-photo-141783.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/6136358/pexels-photo-6136358.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/695210/pexels-photo-695210.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/2376986/pexels-photo-2376986.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/530158/pexels-photo-530158.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/6130833/pexels-photo-6130833.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/10719873/pexels-photo-10719873.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/6153419/pexels-photo-6153419.jpeg?auto=compress&cs=tinysrgb&w=2200',
-  'https://images.pexels.com/photos/8601121/pexels-photo-8601121.jpeg?auto=compress&cs=tinysrgb&w=2200',
-] as const;
+const detailHeroImage = '/assets/tours/detail-hero.jpg';
 
-const sharedTourGalleryImages = [
+
+const fallbackGalleryImages = [
   '/assets/tour-details/shared-gallery-main.jpg',
   '/assets/tour-details/shared-gallery-top-right.jpg',
   '/assets/tour-details/shared-gallery-bottom-left.jpg',
@@ -80,7 +56,6 @@ export const TourDetailsPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [openDay, setOpenDay] = useState(1);
-  const [heroCandidateIndex, setHeroCandidateIndex] = useState(0);
   const [reviewMessage, setReviewMessage] = useState('');
   const [replyName, setReplyName] = useState(state.currentPerson?.getFullName() ?? '');
   const [replyEmail, setReplyEmail] = useState(state.currentPerson?.getEmail() ?? '');
@@ -151,56 +126,22 @@ export const TourDetailsPage = () => {
   const mapUrl = `https://www.google.com/maps?q=${tour
     .getDestination()
     .getLatitude()},${tour.getDestination().getLongitude()}&z=11&output=embed`;
+  const storedGallery = tour.getGallery();
   const galleryImages = [
-    sharedTourGalleryImages[0] ?? tour.getGallery()[0],
-    sharedTourGalleryImages[1] ?? tour.getGallery()[1],
-    sharedTourGalleryImages[2] ?? tour.getGallery()[2],
-    sharedTourGalleryImages[3] ?? tour.getGallery()[3],
+    storedGallery[0] || fallbackGalleryImages[0],
+    storedGallery[1] || fallbackGalleryImages[1],
+    storedGallery[2] || fallbackGalleryImages[2],
+    storedGallery[3] || fallbackGalleryImages[3],
   ];
-  const activeHeroCandidate = detailHeroCandidates[heroCandidateIndex];
-  const showPreviousHeroCandidate = () => {
-    setHeroCandidateIndex((current) =>
-      current === 0 ? detailHeroCandidates.length - 1 : current - 1,
-    );
-  };
-  const showNextHeroCandidate = () => {
-    setHeroCandidateIndex((current) =>
-      current === detailHeroCandidates.length - 1 ? 0 : current + 1,
-    );
-  };
-
   return (
     <>
       <section
         className="tour-detail-strip"
         style={{
-          backgroundImage: `url(${activeHeroCandidate})`,
+          backgroundImage: `url(${detailHeroImage})`,
+          backgroundPosition: 'center 26%',
         }}
-      >
-        <div className="container tour-detail-hero-picker">
-          <button type="button" onClick={showPreviousHeroCandidate}>
-            &lt;
-          </button>
-          <span>
-            Hero {heroCandidateIndex + 1} / {detailHeroCandidates.length}
-          </span>
-          <div className="tour-detail-hero-picker__options">
-            {detailHeroCandidates.map((candidate, index) => (
-              <button
-                type="button"
-                key={candidate}
-                className={index === heroCandidateIndex ? 'is-active' : ''}
-                onClick={() => setHeroCandidateIndex(index)}
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={showNextHeroCandidate}>
-            &gt;
-          </button>
-        </div>
-      </section>
+      />
 
       <section className="tour-detail-top">
         <div className="container">
@@ -216,33 +157,31 @@ export const TourDetailsPage = () => {
                   <RatingStars value={tour.getAverageRating()} size={18} />
                   ({tour.getReviewCount()} Reviews)
                 </span>
+                <div className="tour-detail-overview__actions">
+                  <button type="button" onClick={handleShare}>
+                    <Share2 size={16} />
+                    Share
+                  </button>
+                  <button
+                    type="button"
+                    className={wishlisted ? 'is-active' : ''}
+                    onClick={handleWishlist}
+                  >
+                    <Heart size={16} />
+                    Add To Wishlist
+                  </button>
+                </div>
               </div>
-            </div>
-
-            <div className="tour-detail-overview__actions">
-              <button type="button" onClick={handleShare}>
-                <Share2 size={16} />
-                Share
-              </button>
-              <button
-                type="button"
-                className={wishlisted ? 'is-active' : ''}
-                onClick={handleWishlist}
-              >
-                <Heart size={16} />
-                Add To Wishlist
-              </button>
             </div>
           </div>
 
           <div className="tour-detail-gallery">
-            <img
-              className="tour-detail-gallery__main"
-              src={galleryImages[0]}
-              alt={tour.getTitle()}
-            />
-
             <div className="tour-detail-gallery__side">
+              <div className="tour-detail-gallery__thumbs">
+                <img src={galleryImages[2]} alt={`${tour.getTitle()} stay`} />
+                <img src={galleryImages[3]} alt={`${tour.getTitle()} pool`} />
+              </div>
+
               <div className="tour-detail-gallery__video">
                 {isVideoSource(galleryImages[1]) ? (
                   <video
@@ -257,11 +196,10 @@ export const TourDetailsPage = () => {
                   <img src={galleryImages[1]} alt={`${tour.getTitle()} scenic view`} />
                 )}
               </div>
+            </div>
 
-              <div className="tour-detail-gallery__thumbs">
-                <img src={galleryImages[2]} alt={`${tour.getTitle()} stay`} />
-                <img src={galleryImages[3]} alt={`${tour.getTitle()} pool`} />
-              </div>
+            <div className="tour-detail-gallery__main">
+              <img src={galleryImages[0]} alt={tour.getTitle()} />
             </div>
           </div>
 

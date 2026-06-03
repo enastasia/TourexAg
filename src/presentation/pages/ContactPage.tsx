@@ -14,7 +14,10 @@ export const ContactPage = () => {
       <BreadcrumbHero
         eyebrow="Get In Touch"
         title="Contact With Us"
-        image={tours[2]?.getHeroImage() ?? tours[0]?.getHeroImage() ?? ''}
+        image="/assets/backgrounds/contact-bg.jpg"
+        imagePosition="center 48%"
+        overlay="none"
+        className="breadcrumb-hero--tours"
         crumbs={[
           { label: 'Home', href: '/' },
           { label: 'Pages' },
@@ -22,14 +25,10 @@ export const ContactPage = () => {
         ]}
       />
 
-      <section className="section">
+      <section className="section section--contact">
         <div className="container contact-layout">
           <div className="contact-card">
             <h2>Information:</h2>
-            <p>
-              Brendan Fraser, renowned actor of the silver screen, has taken on a new
-              role as a tour guide, leveraging his passion for adventure.
-            </p>
             <div className="contact-card__info">
               <p>
                 <PhoneCall size={16} />

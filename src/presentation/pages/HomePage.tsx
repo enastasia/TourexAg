@@ -153,7 +153,7 @@ export const HomePage = () => {
                 </div>
               </article>
             </div>
-            <Link className="button button--primary" to="/pricing">
+            <Link className="button button--primary" to="/tours">
               Book Your Trip
             </Link>
           </div>

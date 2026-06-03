@@ -187,6 +187,21 @@ export class AppStore {
     }
   }
 
+  public updateCurrentProfile(fullName: string, phone: string, avatar?: string): void {
+    const person = this.state.currentPerson;
+    if (!person) return;
+
+    person.updateProfile(fullName, phone, avatar);
+    this.userRepository.savePerson(person);
+
+    const refreshedPerson = this.userRepository.findById(person.getId()) ?? person;
+    this.setState({
+      currentPerson: refreshedPerson,
+      people: this.userRepository.getAll(),
+      flashMessage: { tone: 'success', text: 'Profile updated.' },
+    });
+  }
+
   public toggleWishlist(tourId: string): ServiceResult<boolean> {
     return this.runAction(() => {
       const user = this.authGuard.requireUser(
@@ -508,6 +523,62 @@ export class AppStore {
 
       return result;
     }, 'Unable to delete tour.');
+  }
+
+  public deleteReview(tourId: string, reviewId: string): ServiceResult<void> {
+    return this.runAction(() => {
+      const admin = this.authGuard.requireAdmin(
+        this.state.currentPerson,
+        'Only admins can delete reviews.',
+      );
+
+      if (!admin.success) {
+        this.setFlash('error', admin.error ?? 'Only admins can delete reviews.');
+        return failureResult(admin.error ?? 'Only admins can delete reviews.');
+      }
+
+      const result = this.adminService.deleteReview(tourId, reviewId);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to delete review.');
+        return result;
+      }
+
+      this.setState({
+        tours: this.catalogRepository.getAll(),
+        flashMessage: { tone: 'success', text: 'Review deleted.' },
+      });
+
+      return result;
+    }, 'Unable to delete review.');
+  }
+
+  public deleteUser(userId: string): ServiceResult<void> {
+    return this.runAction(() => {
+      const admin = this.authGuard.requireAdmin(
+        this.state.currentPerson,
+        'Only admins can delete users.',
+      );
+
+      if (!admin.success) {
+        this.setFlash('error', admin.error ?? 'Only admins can delete users.');
+        return failureResult(admin.error ?? 'Only admins can delete users.');
+      }
+
+      const result = this.adminService.deleteUser(userId);
+
+      if (!result.success) {
+        this.setFlash('error', result.error ?? 'Unable to delete user.');
+        return result;
+      }
+
+      this.setState({
+        people: this.userRepository.getAll(),
+        flashMessage: { tone: 'success', text: 'User deleted.' },
+      });
+
+      return result;
+    }, 'Unable to delete user.');
   }
 
   public getCatalogPage(): CatalogPage {

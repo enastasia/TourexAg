@@ -128,7 +128,7 @@ describe('Вхід та вихід з системи', () => {
       password: 'wrong_password',
     });
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Invalid');
+    expect(result.error).toContain('Incorrect password');
   });
 
   it('logout очищує сесію', () => {

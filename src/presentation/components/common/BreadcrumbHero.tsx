@@ -4,7 +4,7 @@ interface BreadcrumbHeroProps {
   imagePosition?: string;
   className?: string;
   eyebrow?: string;
-  overlay?: 'default' | 'soft';
+  overlay?: 'default' | 'soft' | 'subtle' | 'none';
   crumbs: Array<{
     label: string;
     href?: string;
@@ -14,6 +14,8 @@ interface BreadcrumbHeroProps {
 const overlayGradient = {
   default: 'linear-gradient(180deg, rgba(8, 13, 28, 0.78), rgba(8, 13, 28, 0.34))',
   soft: 'linear-gradient(180deg, rgba(8, 13, 28, 0.24), rgba(8, 13, 28, 0.06))',
+  subtle: 'linear-gradient(180deg, rgba(8, 13, 28, 0.12), rgba(8, 13, 28, 0.03))',
+  none: 'linear-gradient(180deg, transparent, transparent)',
 } as const;
 
 export const BreadcrumbHero = ({
