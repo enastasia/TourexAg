@@ -2,13 +2,24 @@ import { BookingRepository } from '../application/repositories/BookingRepository
 import { CartRepository } from '../application/repositories/CartRepository';
 import { CatalogRepository } from '../application/repositories/CatalogRepository';
 import { PricingPlanRepository } from '../application/repositories/PricingPlanRepository';
-import { UserRepository } from '../application/repositories/UserRepository';
+import { UserRepository, type StoredPerson } from '../application/repositories/UserRepository';
+import { Admin } from '../domain/people/Admin';
 import { Tour } from '../domain/catalog/Tour';
+import { User } from '../domain/people/User';
 import { createSeedBookings } from './data/seedBookings';
 import { createSeedCarts } from './data/seedCarts';
 import { createSeedPricingPlans } from './data/seedPricingPlans';
 import { createSeedTours } from './data/seedCatalog';
 import { createSeedUsers } from './data/seedUsers';
+
+/**
+ * Bump this number whenever seed data changes and existing localStorage
+ * must be migrated. Sync/migration methods only run when the stored
+ * version is older than SEED_VERSION, so user edits made through the
+ * admin panel are never overwritten on a normal page reload.
+ */
+const SEED_VERSION = 7;
+const SEED_VERSION_KEY = 'tourex.seedVersion';
 
 const OBSOLETE_SEED_TOUR_TITLES = ['авмвы'];
 
@@ -23,20 +34,43 @@ export class DatabaseSeeder {
 
   public seed(): void {
     const seedTours = createSeedTours();
+    const storedVersion = this.getStoredVersion();
+    const needsMigration = storedVersion < SEED_VERSION;
 
     this.catalog.seed(seedTours);
     this.deleteObsoleteSeedToursByTitle(OBSOLETE_SEED_TOUR_TITLES);
     this.syncSeedCatalog(seedTours);
-    this.syncSeedGroupSizes(seedTours);
-    this.syncSeedReviews(seedTours);
-    this.syncSeedFacets(seedTours);
+
+    if (needsMigration) {
+      this.syncSeedGroupSizes(seedTours);
+      this.syncSeedReviews(seedTours);
+      this.syncSeedFacets(seedTours);
+      this.syncSeedGallery(seedTours);
+      this.syncSeedImages(seedTours);
+    }
 
     this.users.seed(createSeedUsers());
+    this.syncSeedCredentials(createSeedUsers());
     this.carts.seed(createSeedCarts());
     this.migrateEmbeddedUserCarts();
 
     this.bookings.seed(createSeedBookings(seedTours));
     this.pricingPlans.seed(createSeedPricingPlans());
+
+    if (needsMigration) {
+      this.setStoredVersion(SEED_VERSION);
+    }
+  }
+
+  private getStoredVersion(): number {
+    if (typeof window === 'undefined') return SEED_VERSION;
+    const raw = window.localStorage.getItem(SEED_VERSION_KEY);
+    return raw ? Number(raw) : 0;
+  }
+
+  private setStoredVersion(version: number): void {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(SEED_VERSION_KEY, String(version));
   }
 
   private migrateEmbeddedUserCarts(): void {
@@ -168,6 +202,99 @@ export class DatabaseSeeder {
     if (hasChanges) {
       this.catalog.saveAll(normalizedCatalog);
     }
+  }
+
+  private syncSeedCredentials(seedUsers: StoredPerson[]): void {
+    for (const seedUser of seedUsers) {
+      const current = this.users.findById(seedUser.getId());
+      if (!current) continue;
+
+      const emailChanged = current.getEmail() !== seedUser.getEmail();
+      const passwordChanged = !current.matchesPasswordHash(
+        seedUser.toPrimitives().passwordHash,
+      );
+
+      if (!emailChanged && !passwordChanged) continue;
+
+      const primitives = current.toPrimitives();
+      const updatedPrimitives = {
+        ...primitives,
+        email: seedUser.getEmail(),
+        passwordHash: seedUser.toPrimitives().passwordHash,
+      };
+
+      const restored =
+        current instanceof Admin
+          ? Admin.restore(updatedPrimitives as import('../domain/people/Admin').AdminPrimitives)
+          : User.restore(updatedPrimitives as import('../domain/people/User').UserPrimitives);
+
+      this.users.savePerson(restored);
+    }
+  }
+
+  private syncSeedGallery(seedTours: Tour[]): void {
+    const currentCatalog = this.catalog.getAll();
+    if (currentCatalog.length === 0) return;
+
+    const seedGalleryMap = new Map(
+      seedTours.map((tour) => [tour.getId(), tour.getGallery()]),
+    );
+    let hasChanges = false;
+
+    const normalizedCatalog = currentCatalog.map((tour) => {
+      const expectedGallery = seedGalleryMap.get(tour.getId());
+      if (!expectedGallery) return tour;
+
+      const currentGallery = tour.getGallery();
+      if (JSON.stringify(currentGallery) === JSON.stringify(expectedGallery)) return tour;
+
+      hasChanges = true;
+      return Tour.restore({ ...tour.toPrimitives(), gallery: expectedGallery });
+    });
+
+    if (hasChanges) this.catalog.saveAll(normalizedCatalog);
+  }
+
+  private syncSeedImages(seedTours: Tour[]): void {
+    const currentCatalog = this.catalog.getAll();
+    if (currentCatalog.length === 0) return;
+
+    const seedImageMap = new Map(
+      seedTours.map((tour) => {
+        const p = tour.toPrimitives();
+        return [tour.getId(), { cardImage: p.cardImage, heroImage: p.heroImage, gallery: p.gallery }];
+      }),
+    );
+    let hasChanges = false;
+
+    const normalizedCatalog = currentCatalog.map((tour) => {
+      const expected = seedImageMap.get(tour.getId());
+      if (!expected) return tour;
+
+      const primitives = tour.toPrimitives();
+      const needsCard = primitives.cardImage !== expected.cardImage && expected.cardImage.startsWith('/assets/tours/custom/');
+      const needsHero = primitives.heroImage !== expected.heroImage && expected.heroImage.startsWith('/assets/tours/custom/');
+      const needsGallery = expected.gallery.some(
+        (img, i) => img.startsWith('/assets/tours/custom/') && primitives.gallery[i] !== img,
+      );
+
+      if (!needsCard && !needsHero && !needsGallery) return tour;
+
+      hasChanges = true;
+      const newGallery = [...primitives.gallery];
+      expected.gallery.forEach((img, i) => {
+        if (img.startsWith('/assets/tours/custom/')) newGallery[i] = img;
+      });
+
+      return Tour.restore({
+        ...primitives,
+        cardImage: needsCard ? expected.cardImage : primitives.cardImage,
+        heroImage: needsHero ? expected.heroImage : primitives.heroImage,
+        gallery: needsGallery ? newGallery : primitives.gallery,
+      });
+    });
+
+    if (hasChanges) this.catalog.saveAll(normalizedCatalog);
   }
 
   private syncSeedFacets(seedTours: Tour[]): void {

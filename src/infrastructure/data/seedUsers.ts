@@ -7,10 +7,10 @@ import { SEED_CREDENTIALS, SEED_IDS } from './seedIds';
 export const createSeedUsers = (): Array<User | Admin> => [
   new User(
     SEED_IDS.people.traveler,
-    'Sofia Traveler',
+    'Daniel Kross',
     SEED_CREDENTIALS.traveler.email,
     '+1 202 555 0148',
-    'https://i.pravatar.cc/300?u=traveler@tourex.test',
+    '/assets/avatars/avatar-traveler.jpg',
     hashPassword(SEED_CREDENTIALS.traveler.password),
     new Wishlist(SEED_IDS.wishlists.traveler, SEED_IDS.people.traveler, [
       SEED_IDS.tours.maldives,
@@ -21,10 +21,10 @@ export const createSeedUsers = (): Array<User | Admin> => [
   ),
   new Admin(
     SEED_IDS.people.admin,
-    'Marta Admin',
+    'Marcus Reed',
     SEED_CREDENTIALS.admin.email,
     '+1 202 555 0199',
-    'https://i.pravatar.cc/300?u=admin@tourex.test',
+    '/assets/avatars/avatar-admin.jpg',
     hashPassword(SEED_CREDENTIALS.admin.password),
     ['Catalog management', 'Booking review', 'Customer support'],
     new Date('2026-01-06T10:00:00.000Z'),
