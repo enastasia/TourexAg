@@ -1,5 +1,7 @@
 import { BaseEntity } from '../shared/BaseEntity';
 import type { ValidationError } from '../shared/ValidationError';
+import { Email } from '../shared/value-objects/Email';
+import { Phone } from '../shared/value-objects/Phone';
 import type { PersonRole } from '../../shared/types/domain';
 
 export interface PersonPrimitives {
@@ -17,17 +19,22 @@ export interface PersonPrimitives {
 export abstract class Person<
   TPrimitives extends PersonPrimitives,
 > extends BaseEntity<TPrimitives> {
+  protected email: Email;
+  protected phone: Phone;
+
   protected constructor(
     id: string,
     protected fullName: string,
-    protected email: string,
-    protected phone: string,
+    email: string,
+    phone: string,
     protected avatar: string,
     protected passwordHash: string,
     createdAt = new Date(),
     updatedAt = new Date(),
   ) {
     super(id, createdAt, updatedAt);
+    this.email = new Email(email);
+    this.phone = new Phone(phone);
   }
 
   public abstract getRole(): PersonRole;
@@ -39,11 +46,11 @@ export abstract class Person<
   }
 
   public getEmail(): string {
-    return this.email;
+    return this.email.getValue();
   }
 
   public getPhone(): string {
-    return this.phone;
+    return this.phone.getValue();
   }
 
   public getAvatar(): string {
@@ -54,9 +61,12 @@ export abstract class Person<
     return this.passwordHash === passwordHash;
   }
 
-  public updateProfile(fullName: string, phone: string): void {
+  public updateProfile(fullName: string, phone: string, avatar?: string): void {
     this.fullName = fullName.trim();
-    this.phone = phone.trim();
+    this.phone = new Phone(phone);
+    if (avatar !== undefined) {
+      this.avatar = avatar;
+    }
     this.touch();
   }
 
@@ -70,20 +80,28 @@ export abstract class Person<
       });
     }
 
-    if (!this.email.includes('@')) {
+    if (!this.email.isValid()) {
       errors.push({
         field: 'email',
-        message: 'Provide a valid email address.',
+        message: 'Provide a valid email address (e.g. user@example.com).',
       });
     }
 
-    if (this.phone.trim().length < 6) {
+    if (!this.phone.isValid()) {
       errors.push({
         field: 'phone',
-        message: 'Provide a valid phone number.',
+        message: 'Provide a valid phone number with country code (e.g. +380 XX XXX XXXX).',
       });
     }
 
     return errors;
+  }
+
+  public static isValidEmail(email: string): boolean {
+    return Email.isValid(email);
+  }
+
+  public static isValidPhone(phone: string): boolean {
+    return Phone.isValid(phone);
   }
 }
