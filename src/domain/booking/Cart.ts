@@ -1,5 +1,6 @@
 import { BaseEntity } from '../shared/BaseEntity';
 import type { IUserOwned } from '../shared/contracts';
+import { BookingException } from '../shared/exceptions/BookingException';
 import type { BookingPrimitives } from './Booking';
 import { Booking } from './Booking';
 
@@ -96,11 +97,11 @@ export class Cart extends BaseEntity<CartPrimitives> implements IUserOwned {
 
   private ensureEditableLine(booking: Booking): void {
     if (!booking.belongsToUser(this.userId)) {
-      throw new Error('Cart line must belong to the cart owner.');
+      throw new BookingException('Cart line must belong to the cart owner.');
     }
 
     if (booking.getStatus() !== 'draft') {
-      throw new Error('Only draft bookings can be stored in a cart.');
+      throw new BookingException('Only draft bookings can be stored in a cart.');
     }
   }
 }

@@ -1,4 +1,5 @@
 import type { ISerializable, IValidatable } from './contracts';
+import { ValidationException } from './exceptions/ValidationException';
 import type { ValidationError } from './ValidationError';
 
 export abstract class BaseEntity<TPrimitives>
@@ -28,6 +29,13 @@ export abstract class BaseEntity<TPrimitives>
 
   public validate(): ValidationError[] {
     return [];
+  }
+
+  public assertValid(): void {
+    const errors = this.validate();
+    if (errors.length > 0) {
+      throw new ValidationException(errors);
+    }
   }
 
   protected touch(): void {

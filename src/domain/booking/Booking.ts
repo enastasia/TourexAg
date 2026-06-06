@@ -1,5 +1,6 @@
 import { BaseEntity } from '../shared/BaseEntity';
 import type { IUserOwned } from '../shared/contracts';
+import { BookingException } from '../shared/exceptions/BookingException';
 import type { BookingStatus, TourKind } from '../../shared/types/domain';
 import { BookingRequest, type BookingRequestPrimitives } from './BookingRequest';
 
@@ -102,7 +103,7 @@ export class Booking extends BaseEntity<BookingPrimitives> implements IUserOwned
 
   public confirm(): void {
     if (this.status !== 'draft') {
-      throw new Error('Only draft bookings can be confirmed.');
+      throw new BookingException('Only draft bookings can be confirmed.');
     }
 
     this.status = 'confirmed';
@@ -111,7 +112,7 @@ export class Booking extends BaseEntity<BookingPrimitives> implements IUserOwned
 
   public cancel(): void {
     if (this.status === 'cancelled') {
-      throw new Error('Booking is already cancelled.');
+      throw new BookingException('Booking is already cancelled.');
     }
 
     this.status = 'cancelled';
@@ -120,7 +121,7 @@ export class Booking extends BaseEntity<BookingPrimitives> implements IUserOwned
 
   public updateRequest(request: BookingRequest, totalPrice: number): void {
     if (this.status !== 'draft') {
-      throw new Error('Only draft bookings can be updated.');
+      throw new BookingException('Only draft bookings can be updated.');
     }
 
     this.request = request;

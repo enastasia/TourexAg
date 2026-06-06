@@ -10,6 +10,7 @@ import type {
 } from '../shared/contracts';
 import { Review, type ReviewPrimitives, type ReviewScores } from '../reviews/Review';
 import { Destination, type DestinationPrimitives } from './Destination';
+import { BookingException } from '../shared/exceptions/BookingException';
 import { createId } from '../../shared/utils/identity';
 import type { TourKind, TourTransportMode } from '../../shared/types/domain';
 import {
@@ -204,6 +205,14 @@ export class Tour
     }
   }
 
+  public removeReview(reviewId: string): boolean {
+    const index = this.reviews.findIndex((r) => r.getId() === reviewId);
+    if (index < 0) return false;
+    this.reviews.splice(index, 1);
+    this.touch();
+    return true;
+  }
+
   public getReviewCount(): number {
     return this.reviews.length;
   }
@@ -292,7 +301,7 @@ export class Tour
 
   public createBooking(userId: string, request: BookingRequest): Booking {
     if (!this.canBeBooked(request)) {
-      throw new Error('Invalid booking request.');
+      throw new BookingException('Invalid booking request.');
     }
 
     const quote = this.quote(request);
@@ -457,7 +466,7 @@ export class Tour
       transportMode: primitives.transportMode ?? 'flightIncluded',
       groupSize: primitives.groupSize,
       typeLabel: primitives.typeLabel,
-      languages: primitives.languages,
+      languages: primitives.languages ?? [],
       amenities: primitives.amenities,
       highlightItems: primitives.highlightItems,
       includedItems: primitives.includedItems,
@@ -515,7 +524,7 @@ export class SeasonalTour extends Tour {
   ) {
     super({
       ...props,
-      ribbonLabel: props.ribbonLabel ?? seasonName,
+      ribbonLabel: props.ribbonLabel ?? 'Seasonal',
     });
   }
 
@@ -549,7 +558,7 @@ export class PremiumTour extends Tour {
   public constructor(props: TourProps, private readonly premiumMultiplier: number) {
     super({
       ...props,
-      ribbonLabel: props.ribbonLabel ?? 'Private',
+      ribbonLabel: props.ribbonLabel ?? 'Premium',
     });
   }
 
