@@ -17,6 +17,13 @@ import {
   SeasonalTourPricingStrategy,
   PremiumTourPricingStrategy,
 } from '../domain/catalog/TourPricing';
+import { Email } from '../domain/shared/value-objects/Email';
+import { Phone } from '../domain/shared/value-objects/Phone';
+import { DomainException } from '../domain/shared/exceptions/DomainException';
+import { BookingException } from '../domain/shared/exceptions/BookingException';
+import { ValidationException } from '../domain/shared/exceptions/ValidationException';
+import { EntityNotFoundException } from '../domain/shared/exceptions/EntityNotFoundException';
+import { AuthenticationException } from '../domain/shared/exceptions/AuthenticationException';
 import { hashPassword } from '../shared/utils/security';
 
 
@@ -468,5 +475,121 @@ describe('Destination', () => {
     expect(d.getCountry()).toBe('France');
     expect(d.getLatitude()).toBeCloseTo(48.8566);
     expect(d.getLongitude()).toBeCloseTo(2.3522);
+  });
+});
+
+describe('Value Object — Email', () => {
+  it('нормалізує значення до нижнього регістру', () => {
+    const email = new Email('  User@Example.COM  ');
+    expect(email.getValue()).toBe('user@example.com');
+  });
+
+  it('isValid() повертає true для коректного email', () => {
+    expect(new Email('test@example.com').isValid()).toBe(true);
+  });
+
+  it('isValid() повертає false для некоректного email', () => {
+    expect(new Email('not-an-email').isValid()).toBe(false);
+    expect(new Email('').isValid()).toBe(false);
+  });
+
+  it('equals() порівнює два email', () => {
+    const a = new Email('user@test.com');
+    const b = new Email('USER@test.com');
+    const c = new Email('other@test.com');
+    expect(a.equals(b)).toBe(true);
+    expect(a.equals(c)).toBe(false);
+  });
+
+  it('статичний isValid() працює без створення обʼєкта', () => {
+    expect(Email.isValid('ok@test.com')).toBe(true);
+    expect(Email.isValid('bad')).toBe(false);
+  });
+});
+
+describe('Value Object — Phone', () => {
+  it('зберігає значення з обрізаними пробілами', () => {
+    const phone = new Phone('  +380123456789  ');
+    expect(phone.getValue()).toBe('+380123456789');
+  });
+
+  it('isValid() повертає true для коректного номера', () => {
+    expect(new Phone('+380123456789').isValid()).toBe(true);
+    expect(new Phone('+380 12 345 6789').isValid()).toBe(true);
+  });
+
+  it('isValid() повертає false для некоректного номера', () => {
+    expect(new Phone('12345').isValid()).toBe(false);
+    expect(new Phone('').isValid()).toBe(false);
+  });
+
+  it('equals() порівнює нормалізовані номери', () => {
+    const a = new Phone('+380 12 345 6789');
+    const b = new Phone('+380123456789');
+    expect(a.equals(b)).toBe(true);
+  });
+
+  it('статичний isValid() працює без створення обʼєкта', () => {
+    expect(Phone.isValid('+380123456789')).toBe(true);
+    expect(Phone.isValid('abc')).toBe(false);
+  });
+});
+
+describe('Доменні виключення — ієрархія', () => {
+  it('DomainException є базовим класом з кодом', () => {
+    const ex = new DomainException('test error', 'TEST');
+    expect(ex).toBeInstanceOf(Error);
+    expect(ex).toBeInstanceOf(DomainException);
+    expect(ex.message).toBe('test error');
+    expect(ex.code).toBe('TEST');
+    expect(ex.name).toBe('DomainException');
+  });
+
+  it('BookingException наслідує DomainException', () => {
+    const ex = new BookingException('Cannot book');
+    expect(ex).toBeInstanceOf(DomainException);
+    expect(ex).toBeInstanceOf(BookingException);
+    expect(ex.code).toBe('BOOKING_ERROR');
+    expect(ex.name).toBe('BookingException');
+  });
+
+  it('ValidationException містить масив помилок', () => {
+    const errors = [
+      { field: 'email', message: 'Invalid email' },
+      { field: 'phone', message: 'Invalid phone' },
+    ];
+    const ex = new ValidationException(errors);
+    expect(ex).toBeInstanceOf(DomainException);
+    expect(ex.errors).toHaveLength(2);
+    expect(ex.code).toBe('VALIDATION_ERROR');
+    expect(ex.message).toContain('Invalid email');
+  });
+
+  it('EntityNotFoundException формує повідомлення з назвою сутності', () => {
+    const ex = new EntityNotFoundException('Tour', 'tour_123');
+    expect(ex).toBeInstanceOf(DomainException);
+    expect(ex.code).toBe('ENTITY_NOT_FOUND');
+    expect(ex.message).toContain('Tour');
+    expect(ex.message).toContain('tour_123');
+  });
+
+  it('AuthenticationException має код AUTHENTICATION_ERROR', () => {
+    const ex = new AuthenticationException('Bad credentials');
+    expect(ex).toBeInstanceOf(DomainException);
+    expect(ex.code).toBe('AUTHENTICATION_ERROR');
+  });
+
+  it('Booking.confirm() кидає BookingException для не-draft', () => {
+    const tour = new Tour(createTourProps());
+    const booking = tour.createBooking('user_1', createBookingRequest());
+    booking.confirm();
+    expect(() => booking.confirm()).toThrow(BookingException);
+  });
+
+  it('Cart.addLine() кидає BookingException для чужого бронювання', () => {
+    const tour = new Tour(createTourProps());
+    const foreignBooking = tour.createBooking('user_2', createBookingRequest());
+    const cart = new Cart('cart_1', 'user_1');
+    expect(() => cart.addLine(foreignBooking)).toThrow(BookingException);
   });
 });
