@@ -1,7 +1,7 @@
 import { Admin } from '../../domain/people/Admin';
 import { User } from '../../domain/people/User';
 import { failureResult, successResult, type ServiceResult } from './ServiceResult';
-import type { StoredPerson } from '../repositories/UserRepository';
+import type { StoredPerson } from '../repositories/IUserRepository';
 
 export class AuthGuard {
   public requireUser(

@@ -1,6 +1,7 @@
 import { AuthSession, type AuthSessionPrimitives } from '../../domain/auth/AuthSession';
+import type { ISessionRepository } from './ISessionRepository';
 
-export class SessionRepository {
+export class SessionRepository implements ISessionRepository {
   private readonly storageKey = 'tourex.session';
 
   public get(): AuthSession | null {

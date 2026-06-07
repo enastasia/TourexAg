@@ -1,17 +1,17 @@
 import type { BookingRequest } from '../../domain/booking/BookingRequest';
 import { User } from '../../domain/people/User';
-import { BookingRepository } from '../repositories/BookingRepository';
-import { CartRepository } from '../repositories/CartRepository';
-import { CatalogRepository } from '../repositories/CatalogRepository';
-import { UserRepository } from '../repositories/UserRepository';
+import type { IBookingRepository } from '../repositories/IBookingRepository';
+import type { ICartRepository } from '../repositories/ICartRepository';
+import type { ICatalogRepository } from '../repositories/ICatalogRepository';
+import type { IUserRepository } from '../repositories/IUserRepository';
 import { failureResult, successResult, type ServiceResult } from './ServiceResult';
 
 export class BookingService {
   public constructor(
-    private readonly userRepository: UserRepository,
-    private readonly cartRepository: CartRepository,
-    private readonly catalogRepository: CatalogRepository,
-    private readonly bookingRepository: BookingRepository,
+    private readonly userRepository: IUserRepository,
+    private readonly cartRepository: ICartRepository,
+    private readonly catalogRepository: ICatalogRepository,
+    private readonly bookingRepository: IBookingRepository,
   ) {}
 
   public addToCart(

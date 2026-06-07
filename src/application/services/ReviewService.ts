@@ -1,6 +1,6 @@
 import { Review } from '../../domain/reviews/Review';
-import { CatalogRepository } from '../repositories/CatalogRepository';
-import { UserRepository } from '../repositories/UserRepository';
+import type { ICatalogRepository } from '../repositories/ICatalogRepository';
+import type { IUserRepository } from '../repositories/IUserRepository';
 import { createId } from '../../shared/utils/identity';
 import { failureResult, successResult, type ServiceResult } from './ServiceResult';
 
@@ -18,8 +18,8 @@ export interface ReviewDraft {
 
 export class ReviewService {
   public constructor(
-    private readonly userRepository: UserRepository,
-    private readonly catalogRepository: CatalogRepository,
+    private readonly userRepository: IUserRepository,
+    private readonly catalogRepository: ICatalogRepository,
   ) {}
 
   public createReview(userId: string, draft: ReviewDraft): ServiceResult<void> {

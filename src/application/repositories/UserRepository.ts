@@ -2,14 +2,15 @@ import { Cart, type CartPrimitives } from '../../domain/booking/Cart';
 import { Admin, type AdminPrimitives } from '../../domain/people/Admin';
 import { User, type UserPrimitives } from '../../domain/people/User';
 import { BrowserStorageRepository } from './BrowserStorageRepository';
+import type { IUserRepository, StoredPerson } from './IUserRepository';
 
-export type StoredPerson = User | Admin;
+export type { StoredPerson };
 type StoredPersonPrimitives = UserPrimitives | AdminPrimitives;
 
 export class UserRepository extends BrowserStorageRepository<
   StoredPerson,
   StoredPersonPrimitives
-> {
+> implements IUserRepository {
   public constructor() {
     super('tourex.people');
   }
@@ -34,6 +35,10 @@ export class UserRepository extends BrowserStorageRepository<
     }
 
     this.saveAll(people);
+  }
+
+  public deletePerson(personId: string): void {
+    this.removeWhere((person) => person.getId() === personId);
   }
 
   public getCustomers(): User[] {

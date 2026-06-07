@@ -1,7 +1,7 @@
 import type { Review } from '../../domain/reviews/Review';
 import { Tour } from '../../domain/catalog/Tour';
 import { TourFilter } from '../../domain/catalog/TourFilter';
-import { CatalogRepository } from '../repositories/CatalogRepository';
+import type { ICatalogRepository } from '../repositories/ICatalogRepository';
 import { TourMatcher } from './TourMatcher';
 
 export interface CatalogPage {
@@ -30,11 +30,11 @@ export interface CatalogMeta {
 }
 
 const MAX_CATALOG_PAGES = 3;
-const HIDDEN_FILTER_LANGUAGES = new Set(['Hindi', 'Japanese', 'Ukrainian']);
+const HIDDEN_FILTER_LANGUAGES = new Set(['Hindi', 'Ukrainian']);
 
 export class CatalogService {
   public constructor(
-    private readonly catalogRepository: CatalogRepository,
+    private readonly catalogRepository: ICatalogRepository,
     private readonly tourMatcher: TourMatcher,
   ) {}
 

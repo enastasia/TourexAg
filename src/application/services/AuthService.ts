@@ -1,12 +1,15 @@
 import { AuthSession } from '../../domain/auth/AuthSession';
 import { Cart } from '../../domain/booking/Cart';
+import { Person } from '../../domain/people/Person';
 import { User } from '../../domain/people/User';
 import { Wishlist } from '../../domain/wishlist/Wishlist';
+import { ValidationException } from '../../domain/shared/exceptions/ValidationException';
+import { AuthenticationException } from '../../domain/shared/exceptions/AuthenticationException';
 import { createId } from '../../shared/utils/identity';
 import { hashPassword } from '../../shared/utils/security';
-import { CartRepository } from '../repositories/CartRepository';
-import { SessionRepository } from '../repositories/SessionRepository';
-import { UserRepository, type StoredPerson,} from '../repositories/UserRepository';
+import type { ICartRepository } from '../repositories/ICartRepository';
+import type { ISessionRepository } from '../repositories/ISessionRepository';
+import type { IUserRepository, StoredPerson } from '../repositories/IUserRepository';
 import { failureResult, successResult, type ServiceResult } from './ServiceResult';
 
 export interface LoginPayload {
@@ -23,26 +26,49 @@ export interface RegisterPayload {
 
 export class AuthService {
   public constructor(
-    private readonly userRepository: UserRepository,
-    private readonly cartRepository: CartRepository,
-    private readonly sessionRepository: SessionRepository,
+    private readonly userRepository: IUserRepository,
+    private readonly cartRepository: ICartRepository,
+    private readonly sessionRepository: ISessionRepository,
   ) {}
 
   public login(payload: LoginPayload): ServiceResult<StoredPerson> {
-    const person = this.userRepository.findByEmail(payload.email);
+    try {
+      const person = this.authenticate(payload.email, payload.password);
+      this.sessionRepository.save(
+        new AuthSession(createId('session'), person.getId(), person.getRole()),
+      );
+      return successResult(person);
+    } catch (error) {
+      if (error instanceof AuthenticationException) {
+        return failureResult(error.message);
+      }
+      throw error;
+    }
+  }
 
-    if (!person || !person.matchesPasswordHash(hashPassword(payload.password))) {
-      return failureResult('Invalid email or password.');
+  private authenticate(email: string, password: string): StoredPerson {
+    const person = this.userRepository.findByEmail(email);
+
+    if (!person) {
+      throw new AuthenticationException('No account found with this email address.');
     }
 
-    this.sessionRepository.save(
-      new AuthSession(createId('session'), person.getId(), person.getRole()),
-    );
+    if (!person.matchesPasswordHash(hashPassword(password))) {
+      throw new AuthenticationException('Incorrect password. Please try again.');
+    }
 
-    return successResult(person);
+    return person;
   }
 
   public register(payload: RegisterPayload): ServiceResult<User> {
+    if (!Person.isValidEmail(payload.email)) {
+      return failureResult('Invalid email format. Use format: user@example.com');
+    }
+
+    if (!Person.isValidPhone(payload.phone)) {
+      return failureResult('Invalid phone number. Use international format: +380 XX XXX XXXX');
+    }
+
     if (this.userRepository.findByEmail(payload.email)) {
       return failureResult('A user with this email already exists.');
     }
@@ -53,13 +79,18 @@ export class AuthService {
       payload.fullName,
       payload.email.trim().toLowerCase(),
       payload.phone,
-      `https://i.pravatar.cc/300?u=${payload.email}`,
+      '/assets/default-avatar.svg',
       hashPassword(payload.password),
       new Wishlist(createId('wishlist'), userId),
     );
 
-    if (!user.isValid()) {
-      return failureResult('Provided registration data is not valid.');
+    try {
+      user.assertValid();
+    } catch (error) {
+      if (error instanceof ValidationException) {
+        return failureResult(error.errors[0]?.message ?? 'Provided registration data is not valid.');
+      }
+      throw error;
     }
 
     this.userRepository.savePerson(user);

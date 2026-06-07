@@ -3,8 +3,9 @@ import type { User } from '../../domain/people/User';
 import { createId } from '../../shared/utils/identity';
 import { BrowserStorageRepository } from './BrowserStorageRepository';
 import { normalizeCartRecord } from './BookingRequestMigration';
+import type { ICartRepository } from './ICartRepository';
 
-export class CartRepository extends BrowserStorageRepository<Cart, CartPrimitives> {
+export class CartRepository extends BrowserStorageRepository<Cart, CartPrimitives> implements ICartRepository {
   public constructor() {
     super('tourex.cart');
   }

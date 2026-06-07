@@ -11,9 +11,7 @@ import {
 import { Admin } from '../../domain/people/Admin';
 import { User } from '../../domain/people/User';
 import type { Review } from '../../domain/reviews/Review';
-import {
-  type StoredPerson,
-} from '../repositories/UserRepository';
+import type { StoredPerson } from '../repositories/IUserRepository';
 import { AdminService, type AdminTourDraft } from '../services/AdminService';
 import { AuthService, type LoginPayload, type RegisterPayload } from '../services/AuthService';
 import { BookingService } from '../services/BookingService';

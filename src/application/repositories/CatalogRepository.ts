@@ -1,7 +1,8 @@
 import { Tour, type TourPrimitives } from '../../domain/catalog/Tour';
 import { BrowserStorageRepository } from './BrowserStorageRepository';
+import type { ICatalogRepository } from './ICatalogRepository';
 
-export class CatalogRepository extends BrowserStorageRepository<Tour, TourPrimitives> {
+export class CatalogRepository extends BrowserStorageRepository<Tour, TourPrimitives> implements ICatalogRepository {
   public constructor() {
     super('tourex.catalog');
   }
