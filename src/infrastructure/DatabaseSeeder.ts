@@ -18,7 +18,7 @@ import { createSeedUsers } from './data/seedUsers';
  * version is older than SEED_VERSION, so user edits made through the
  * admin panel are never overwritten on a normal page reload.
  */
-const SEED_VERSION = 7;
+const SEED_VERSION = 9;
 const SEED_VERSION_KEY = 'tourex.seedVersion';
 
 const OBSOLETE_SEED_TOUR_TITLES = ['авмвы'];
@@ -272,18 +272,26 @@ export class DatabaseSeeder {
       if (!expected) return tour;
 
       const primitives = tour.toPrimitives();
-      const needsCard = primitives.cardImage !== expected.cardImage && expected.cardImage.startsWith('/assets/tours/custom/');
-      const needsHero = primitives.heroImage !== expected.heroImage && expected.heroImage.startsWith('/assets/tours/custom/');
-      const needsGallery = expected.gallery.some(
-        (img, i) => img.startsWith('/assets/tours/custom/') && primitives.gallery[i] !== img,
+      // seed-managed paths are kept in sync; images set by admin (other urls) are left as is
+      const isSeedManaged = (img: string | undefined) =>
+        !img ||
+        img.startsWith('/assets/tours/') ||
+        img.startsWith('/assets/decor/') ||
+        img.startsWith('/assets/hero-slider/');
+      const needsCard = primitives.cardImage !== expected.cardImage && isSeedManaged(primitives.cardImage);
+      const needsHero =
+        primitives.heroImage !== expected.heroImage &&
+        primitives.heroImage.startsWith('/assets/tours/custom/');
+      const needsGallery = primitives.gallery.some(
+        (img, i) => img.startsWith('/assets/tours/custom/') && expected.gallery[i] !== img,
       );
 
       if (!needsCard && !needsHero && !needsGallery) return tour;
 
       hasChanges = true;
       const newGallery = [...primitives.gallery];
-      expected.gallery.forEach((img, i) => {
-        if (img.startsWith('/assets/tours/custom/')) newGallery[i] = img;
+      newGallery.forEach((img, i) => {
+        if (img.startsWith('/assets/tours/custom/')) newGallery[i] = expected.gallery[i] ?? img;
       });
 
       return Tour.restore({

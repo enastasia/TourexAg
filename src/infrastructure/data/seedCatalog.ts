@@ -329,65 +329,36 @@ interface TourSeed {
 const TOUR_HERO_IMAGE = '/assets/tours/detail-hero.jpg';
 
 const SHARED_GALLERY = [
-  '/assets/tour-details/shared-gallery-main.jpg',
+  '/assets/tour-details/shared-gallery-main-sunset-island-crop.jpg',
   '/assets/tour-details/shared-gallery-top-right.jpg',
   '/assets/tour-details/shared-gallery-bottom-left.jpg',
   '/assets/tour-details/shared-gallery-bottom-right.jpg',
 ];
 
-const TOUR_CARD_IMAGES: Record<number, string> = {
-  0: '/assets/tours/tour-card-01.jpg',
-  1: '/assets/tours/tour-card-02.jpg',
-  2: '/assets/tours/tour-card-03.jpg',
-  3: '/assets/tours/tour-card-04.jpg',
-  4: '/assets/tours/tour-card-05.jpg',
-  5: '/assets/tours/tour-card-06.jpg',
-  6: '/assets/tours/tour-card-07.jpg',
-  7: '/assets/tours/tour-card-08.jpg',
-  8: '/assets/tours/tour-card-09.jpg',
-  9: '/assets/tours/tour-card-10.jpg',
-  10: '/assets/tours/tour-card-11.jpg',
-  11: '/assets/tours/tour-card-12.jpg',
-};
+const TOUR_CARD_IMAGES = Array.from(
+  { length: 12 },
+  (_, i) => `/assets/tours/tour-card-${String(i + 1).padStart(2, '0')}.jpg`,
+);
 
-/* ── Custom images uploaded via admin panel and persisted as static files ── */
+const HOME_POPULAR_TOUR_IMAGES = Array.from(
+  { length: 8 },
+  (_, i) => `/assets/tours/home-popular-tour-${i + 1}.jpg`,
+);
+
+/* first the dedicated tour-card images, then the home "popular" set on repeat */
+const pickCardImage = (index: number): string =>
+  index < TOUR_CARD_IMAGES.length
+    ? TOUR_CARD_IMAGES[index]
+    : HOME_POPULAR_TOUR_IMAGES[(index - TOUR_CARD_IMAGES.length) % HOME_POPULAR_TOUR_IMAGES.length];
+
+/* ── Custom images uploaded via admin panel and persisted as static files ──
+ * the original files in /assets/tours/custom/ were lost, so the map is empty
+ * until new images are added; tours fall back to pickCardImage / TOUR_HERO_IMAGE */
 const CUSTOM_IMAGES: Record<string, {
   cardImage?: string;
   heroImage?: string;
   gallery?: Record<number, string>;
-}> = {
-  [SEED_IDS.tours.paris]: {
-    cardImage: '/assets/tours/custom/tour_paris_culture--cardImage.jpg',
-    heroImage: '/assets/tours/custom/tour_paris_culture--heroImage.jpg',
-    gallery: { 0: '/assets/tours/custom/tour_paris_culture--gallery_0.jpg' },
-  },
-  [SEED_IDS.tours.cairo]: {
-    cardImage: '/assets/tours/custom/tour_cairo_heritage--cardImage.jpg',
-    heroImage: '/assets/tours/custom/tour_cairo_heritage--heroImage.jpg',
-    gallery: { 0: '/assets/tours/custom/tour_cairo_heritage--gallery_0.jpg' },
-  },
-  [SEED_IDS.tours.peru]: {
-    cardImage: '/assets/tours/custom/tour_peru_andes--cardImage.jpg',
-  },
-  [SEED_IDS.tours.norway]: {
-    cardImage: '/assets/tours/custom/tour_norway_fjords--cardImage.jpg',
-  },
-  [SEED_IDS.tours.greece]: {
-    cardImage: '/assets/tours/custom/tour_greece_islands--cardImage.jpg',
-  },
-  [SEED_IDS.tours.dubai]: {
-    cardImage: '/assets/tours/custom/tour_dubai_marina--cardImage.jpg',
-  },
-  [SEED_IDS.tours.rome]: {
-    cardImage: '/assets/tours/custom/tour_rome_passage--cardImage.jpg',
-  },
-  [SEED_IDS.tours.barcelona]: {
-    cardImage: '/assets/tours/custom/tour_barcelona_gaudi--cardImage.jpg',
-  },
-  [SEED_IDS.tours.sydney]: {
-    cardImage: '/assets/tours/custom/tour_sydney_harbour--cardImage.jpg',
-  },
-};
+}> = {};
 
 const tour = (seed: TourSeed, index: number): Tour => {
   const {
@@ -420,7 +391,7 @@ const tour = (seed: TourSeed, index: number): Tour => {
     slug,
     summary: `A balanced ${durationDays}-day route through ${tourDestination.getLabel()} with guided stops, local context and practical pacing.`,
     heroImage: custom?.heroImage ?? TOUR_HERO_IMAGE,
-    cardImage: custom?.cardImage ?? TOUR_CARD_IMAGES[index] ?? tourDestination.getImage(),
+    cardImage: custom?.cardImage ?? pickCardImage(index),
     gallery: baseGallery,
     destination: tourDestination,
     basePrice,

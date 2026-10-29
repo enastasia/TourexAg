@@ -1,11 +1,10 @@
 import { LogOut, Menu, PhoneCall, Plane, ShoppingCart, UserRound } from 'lucide-react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { Admin } from '../../../domain/people/Admin';
 import { User } from '../../../domain/people/User';
 import { useAppStore } from '../../hooks/useAppStore';
 
 export const Header = () => {
-  const { pathname } = useLocation();
   const navigate = useNavigate();
   const {
     state: { currentCart, currentPerson },
