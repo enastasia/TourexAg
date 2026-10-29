@@ -324,7 +324,7 @@ describe('Адміністративні операції', () => {
       groupSize: 10,
       typeLabel: 'Standard',
       kind: 'standard',
-      imageUrl: '',
+      images: [],
       ribbonLabel: '',
     });
     expect(result.success).toBe(true);
@@ -342,7 +342,7 @@ describe('Адміністративні операції', () => {
       groupSize: tour.getGroupSize(),
       typeLabel: tour.getTypeLabel(),
       kind: tour.getKind(),
-      imageUrl: '',
+      images: [],
       ribbonLabel: '',
     });
     expect(result.success).toBe(true);

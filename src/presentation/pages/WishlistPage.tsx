@@ -9,13 +9,9 @@ import { useAppStore } from '../hooks/useAppStore';
 const ITEMS_PER_PAGE = 4;
 
 export const WishlistPage = () => {
-  const { state, store } = useAppStore();
+  const { state } = useAppStore();
   const user = state.currentPerson;
   const [currentPage, setCurrentPage] = useState(1);
-  const heroImage =
-    store.getFeaturedTours(1)[0]?.getHeroImage() ??
-    state.tours[0]?.getHeroImage() ??
-    '';
 
   if (!(user instanceof User)) {
     return null;
@@ -38,7 +34,7 @@ export const WishlistPage = () => {
         eyebrow="Saved Dream Escapes"
         title="Wishlist Page"
         image="/assets/backgrounds/wishlist-bg.jpg"
-        imagePosition="center 45%"
+        imagePosition="center 35%"
         overlay="none"
         className="breadcrumb-hero--tours"
         crumbs={[

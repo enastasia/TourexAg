@@ -6,8 +6,6 @@ import { HeroSearchPanel } from '../components/common/HeroSearchPanel';
 import { TourCard } from '../components/tours/TourCard';
 import { TourFiltersSidebar } from '../components/tours/TourFiltersSidebar';
 
-const toursHeroImage = '/assets/hero-slider/slide-7.jpg';
-
 export const ToursPage = () => {
   const { store, state } = useAppStore();
   const catalogPage = store.getCatalogPage();

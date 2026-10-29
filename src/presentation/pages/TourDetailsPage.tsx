@@ -26,11 +26,11 @@ const scoreLabels = {
   rooms: 'Rooms',
 } as const;
 
-const detailHeroImage = '/assets/tours/detail-hero.jpg';
+const detailHeroImage = '/assets/tours/detail-hero-waves.jpg';
 
 
 const fallbackGalleryImages = [
-  '/assets/tour-details/shared-gallery-main.jpg',
+  '/assets/tour-details/shared-gallery-main-sunset-island-crop.jpg',
   '/assets/tour-details/shared-gallery-top-right.jpg',
   '/assets/tour-details/shared-gallery-bottom-left.jpg',
   '/assets/tour-details/shared-gallery-bottom-right.jpg',
@@ -139,7 +139,7 @@ export const TourDetailsPage = () => {
         className="tour-detail-strip"
         style={{
           backgroundImage: `url(${detailHeroImage})`,
-          backgroundPosition: 'center 26%',
+          backgroundPosition: 'center 50%',
         }}
       />
 

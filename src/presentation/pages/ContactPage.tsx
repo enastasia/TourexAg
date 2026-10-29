@@ -1,12 +1,8 @@
 import { MapPin, PhoneCall } from 'lucide-react';
 import { useState } from 'react';
 import { BreadcrumbHero } from '../components/common/BreadcrumbHero';
-import { useAppStore } from '../hooks/useAppStore';
 
 export const ContactPage = () => {
-  const {
-    state: { tours },
-  } = useAppStore();
   const [sent, setSent] = useState(false);
 
   return (
@@ -15,7 +11,7 @@ export const ContactPage = () => {
         eyebrow="Get In Touch"
         title="Contact With Us"
         image="/assets/backgrounds/contact-bg.jpg"
-        imagePosition="center 48%"
+        imagePosition="center 35%"
         overlay="none"
         className="breadcrumb-hero--tours"
         crumbs={[
